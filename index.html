@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guided Physics Simulation: FBD & Equilibrium</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Using Inter font */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom styles for sliders */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: #d1d5db; /* gray-300 */
+            outline: none;
+            opacity: 0.9;
+            transition: opacity .2s;
+        }
+        input[type="range"]:hover {
+            opacity: 1;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3b82f6; /* blue-500 */
+            cursor: pointer;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3b82f6; /* blue-500 */
+            cursor: pointer;
+        }
+        /* Style for SVG text to be non-selectable */
+        svg text {
+            user-select: none;
+        }
+        /* Style for the guided learning steps */
+        .step {
+            display: none;
+        }
+        .step.active {
+            display: block;
+        }
+        /* Simple modal style */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.show {
+            display: flex;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 24px;
+            border-radius: 12px;
+            border: 1px solid #888;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 p-4 md:p-8">
+
+    <!-- Modal for feedback -->
+    <div id="feedback-modal" class="modal">
+        <div class="modal-content">
+            <p id="modal-text" class="text-lg font-medium text-gray-800"></p>
+            <button id="modal-close-btn" class="mt-6 w-full bg-blue-600 text-white px-4 py-2.5 rounded-lg shadow-md hover:bg-blue-700 transition duration-300">
+                Continue
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="max-w-7xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200/50">
+        
+        <!-- Header -->
+        <div class="p-6 bg-white border-b border-gray-200">
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900">Guided Physics Simulation</h1>
+            <p class="mt-1 text-gray-500">Chapters 5, 5.3 & 6.1: Free Body Diagrams, Friction & Equilibrium</p>
+        </div>
+
+        <!-- Simulation Area -->
+        <div class="flex flex-col lg:flex-row">
+
+            <!-- Controls Panel (Left) -->
+            <div class="w-full lg:w-1/4 bg-white p-6 border-b lg:border-b-0 lg:border-r border-gray-200">
+                <h2 class="text-xl font-semibold text-gray-800 mb-6">Controls</h2>
+
+                <!-- Angle Slider -->
+                <div class="mb-6">
+                    <label for="angle-slider" class="block text-sm font-medium text-gray-700">Angle of Inclination (<span id="angle-value">0</span>°)</label>
+                    <input type="range" id="angle-slider" min="0" max="89" value="0" class="mt-2">
+                </div>
+
+                <!-- Select Forces -->
+                <div class="mb-6">
+                    <h3 class="text-md font-medium text-gray-700 mb-2">Forces</h3>
+                    <div class="space-y-2">
+                        <div class="flex items-center">
+                            <input id="check-mass" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            <label for="check-mass" class="ml-2 block text-sm text-gray-900">Mass (Mg) & Normal Force (R_N)</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input id="check-f1" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            <label for="check-f1" class="ml-2 block text-sm text-gray-900">External Force 1 (F₁)</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input id="check-f2" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            <label for="check-f2" class="ml-2 block text-sm text-gray-900">External Force 2 (F₂)</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Impending Motion -->
+                <div class="mb-6">
+                    <h3 class="text-md font-medium text-gray-700 mb-2">Friction (F_f)</h3>
+                    <p class="text-xs text-gray-500 mb-2">Friction appears when impending motion is set.</p>
+                    <div class="space-y-2">
+                        <div class="flex items-center">
+                            <input id="motion-none" type="radio" name="motion" value="none" checked class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500">
+                            <label for="motion-none" class="ml-2 block text-sm text-gray-900">None</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input id="motion-up" type="radio" name="motion" value="up" class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500">
+                            <label for="motion-up" class="ml-2 block text-sm text-gray-900">Impending Motion Up-Slope</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input id="motion-down" type="radio" name="motion" value="down" class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500">
+                            <label for="motion-down" class="ml-2 block text-sm text-gray-900">Impending Motion Down-Slope</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Reset Button -->
+                <div>
+                    <button id="reset-btn" class="w-full bg-red-50 text-red-700 px-4 py-2 rounded-lg shadow-sm hover:bg-red-100 transition duration-300 border border-red-200">
+                        Reset All
+                    </button>
+                </div>
+            </div>
+
+            <!-- Visualization (Center) -->
+            <div class="w-full lg:w-1/2 p-6 bg-slate-50" style="min-height: 400px;">
+                <svg id="simulation-svg" viewBox="-200 -200 400 400" preserveAspectRatio="xMidYMid meet" class="w-full h-full">
+                    <!-- This group contains the ground, which doesn't rotate -->
+                    <g id="ground-group">
+                        <line x1="-200" y1="100" x2="200" y2="100" stroke="#8c7a6b" stroke-width="4" />
+                        <!-- Angle Arc -->
+                        <path id="angle-arc" d="M 50 100 A 30 30 0 0 0 38.3 90.7" stroke="black" stroke-width="1.5" fill="none" stroke-dasharray="2,2" />
+                        <text id="angle-text" x="55" y="85" font-size="10" fill="black">θ</text>
+                    </g>
+                    
+                    <!-- This group rotates with the incline -->
+                    <g id="incline-group" transform="rotate(0 0 100)">
+                        <!-- Inclined Plane -->
+                        <line x1="-150" y1="0" x2="150" y2="0" stroke="#a16207" stroke-width="10" />
+                        
+                        <!-- Block -->
+                        <rect id="block" x="-30" y="-50" width="60" height="50" fill="#e5e7eb" stroke="black" stroke-width="2" class="hidden" />
+
+                        <!-- FBD AXES (always visible when block is) -->
+                        <g id="fbd-axes" class="hidden">
+                            <!-- Y-axis -->
+                            <line x1="0" y1="-100" x2="0" y2="70" stroke="black" stroke-width="1.5" stroke-dasharray="4,4" />
+                            <polygon points="0,-105 -5,-95 5,-95" fill="black" />
+                            <text x="5" y="-95" font-size="12" fill="black">y'</text>
+                            <!-- X-axis -->
+                            <line x1="-100" y1="0" x2="150" y2="0" stroke="black" stroke-width="1.5" stroke-dasharray="4,4" />
+                            <polygon points="155,0 145,-5 145,5" fill="black" />
+                            <text x="140" y="-8" font-size="12" fill="black">x'</text>
+                        </g>
+
+                        <!-- FBD VECTORS (in tilted frame) -->
+                        <g id="fbd-vectors" class="hidden">
+                            <!-- Normal Force (R_N) -->
+                            <g id="vec-rn" class="hidden">
+                                <line x1="0" y1="-25" x2="0" y2="-85" stroke="#059669" stroke-width="3" />
+                                <polygon points="0,-90 -5,-80 5,-80" fill="#059669" />
+                                <text x="5" y="-60" font-size="12" fill="#059669" font-weight="bold">R_N</text>
+                            </g>
+                            <!-- Force 1 (F1) -->
+                            <g id="vec-f1" class="hidden">
+                                <line x1="30" y1="-25" x2="100" y2="-25" stroke="#db2777" stroke-width="3" />
+                                <polygon points="105,-25 95,-20 95,-30" fill="#db2777" />
+                                <text x="60" y="-30" font-size="12" fill="#db2777" font-weight="bold">F₁</text>
+                            </g>
+                            <!-- Force 2 (F2) -->
+                            <g id="vec-f2" class="hidden">
+                                <line x1="-30" y1="-25" x2="-100" y2="-25" stroke="#c026d3" stroke-width="3" />
+                                <polygon points="-105,-25 -95,-20 -95,-30" fill="#c026d3" />
+                                <text x="-75" y="-30" font-size="12" fill="#c026d3" font-weight="bold">F₂</text>
+                            </g>
+                            <!-- Friction (F_f) (up-slope) -->
+                            <g id="vec-friction-up" class="hidden">
+                                <line x1="-30" y1="5" x2="-90" y2="5" stroke="#d97706" stroke-width="3" />
+                                <polygon points="-95,5 -85,0 -85,10" fill="#d97706" />
+                                <text x="-65" y="20" font-size="12" fill="#d97706" font-weight="bold">F_f</text>
+                            </g>
+                            <!-- Friction (F_f) (down-slope) -->
+                            <g id="vec-friction-down" class="hidden">
+                                <line x1="30" y1="5" x2="90" y2="5" stroke="#d97706" stroke-width="3" />
+                                <polygon points="95,5 85,0 85,10" fill="#d97706" />
+                                <text x="55" y="20" font-size="12" fill="#d97706" font-weight="bold">F_f</text>
+                            </g>
+
+                            <!-- Weight Components (Wx', Wy') -->
+                            <g id="vec-w-comps" class="hidden">
+                                <!-- Wx' component -->
+                                <line x1="0" y1="0" x2="0" y2="50" stroke="#1d4ed8" stroke-width="2.5" stroke-dasharray="3,3"/>
+                                <polygon points="0,55 -4,47 4,47" fill="#1d4ed8" />
+                                <text x="5" y="35" font-size="10" fill="#1d4ed8" font-weight="bold">Mg·sin(θ)</text>
+                                <!-- Wy' component -->
+                                <line x1="0" y1="0" x2="-43.3" y2="25" stroke="#1d4ed8" stroke-width="2.5" stroke-dasharray="3,3"/>
+                                <polygon points="-46.6,27 -43.3,19 -38.3,27" fill="#1d4ed8" />
+                                <text x="-50" y="45" font-size="10" fill="#1d4ed8" font-weight="bold">Mg·cos(θ)</text>
+                            </g>
+                        </g>
+                    </g>
+                    
+                    <!-- WEIGHT VECTOR (NON-ROTATED) -->
+                    <g id="vec-w-group" class="hidden" transform="rotate(0 0 0)">
+                        <!-- This is the 'real' weight vector, always pointing down -->
+                        <line x1="0" y1="-25" x2="0" y2="50" stroke="#1d4ed8" stroke-width="3" />
+                        <polygon points="0,55 -5,45 5,45" fill="#1d4ed8" />
+                        <text x="5" y="20" font-size="12" fill="#1d4ed8" font-weight="bold">Mg</text>
+                        <!-- Dashed lines connecting W to its components -->
+                        <line id="w-comp-line1" x1="0" y1="50" x2="0" y2="50" stroke="#1d4ed8" stroke-width="1.5" stroke-dasharray="3,3" />
+                        <line id="w-comp-line2" x1="0" y1="0" x2="0" y2="0" stroke="#1d4ed8" stroke-width="1.5" stroke-dasharray="3,3" />
+                    </g>
+
+                    <!-- FBD (Free Body Diagram) - a separate view -->
+                    <g id="fbd-display" transform="translate(100, -100)" class="hidden">
+                        <text x="0" y="-80" font-size="12" text-anchor="middle" font-weight="bold">Free Body Diagram</text>
+                        <!-- FBD is drawn relative to (0,0) of this group -->
+                        <circle cx="0" cy="0" r="5" fill="black" />
+                        <!-- FBD Axes (tilted) -->
+                        <g id="fbd-axes-tilted">
+                            <line x1="-70" y1="0" x2="70" y2="0" stroke="black" stroke-width="1.5" stroke-dasharray="3,3" />
+                            <polygon points="75,0 65,-4 65,4" fill="black" />
+                            <text x="65" y="-6" font-size="10">x'</text>
+                            <line x1="0" y1="-70" x2="0" y2="70" stroke="black" stroke-width="1.5" stroke-dasharray="3,3" />
+                            <polygon points="0,-75 -4,-65 4,-65" fill="black" />
+                            <text x="6" y="-65" font-size="10">y'</text>
+                        </g>
+                        <!-- FBD Vectors (cloned) -->
+                        <g id="fbd-vectors-clone"></g>
+                    </g>
+                </svg>
+            </div>
+
+            <!-- Equations (Right) -->
+            <div class="w-full lg:w-1/4 p-6 bg-white border-t lg:border-t-0 lg:border-l border-gray-200">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">Equations of Equilibrium</h2>
+                
+                <!-- Toggles -->
+                <div class="flex space-x-2 mb-4">
+                    <button id="toggle-fbd" class="toggle-btn flex-1 bg-white border border-gray-300 text-gray-700 px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-50 transition-all duration-200">Show FBD</button>
+                    <button id="toggle-equations" class="toggle-btn flex-1 bg-white border border-gray-300 text-gray-700 px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-50 transition-all duration-200">Show Equations</button>
+                </div>
+
+                <!-- Equation Display -->
+                <div id="equation-display" class="hidden p-4 bg-slate-50 rounded-lg h-80 overflow-auto">
+                    <div class="mb-4">
+                        <h3 class="font-bold text-gray-700">ΣF_y' = 0 (Perpendicular)</h3>
+                        <p class="font-mono text-sm text-gray-900 mt-1">
+                            <span data-testid="eq-y-rn" class="hidden text-green-700">+ R_N</span>
+                            <span data-testid="eq-y-mgcos" class="hidden text-blue-700"> - Mg·cos(θ)</span>
+                            <span data-testid="eq-y-f1y" class="hidden"> - F₁·sin(α)</span>
+                            <span data-testid="eq-y-f2y" class="hidden"> + F₂·sin(β)</span>
+                            = 0
+                        </p>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-700">ΣF_x' = 0 (Parallel)</h3>
+                        <p class="font-mono text-sm text-gray-900 mt-1">
+                            <span data-testid="eq-x-f1" class="hidden text-pink-700"> + F₁</span>
+                            <span data-testid="eq-x-f2" class="hidden text-purple-700"> - F₂</span>
+                            <span data-testid="eq-x-friction-up" class="hidden text-yellow-700"> - F_f</span>
+                            <span data-testid="eq-x-friction-down" class="hidden text-yellow-700"> + F_f</span>
+                            <span data-testid="eq-x-mgsin" class="hidden text-blue-700"> - Mg·sin(θ)</span>
+                            = 0
+                        </p>
+                    </div>
+                    <div id="equation-key" class="mt-4 pt-4 border-t border-gray-300">
+                        <p class="text-xs text-gray-600"><span id="friction-note" class="font-medium"></span></p>
+                        <p id="angle-note" class_A"text-xs text-gray-600 mt-1"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Guided Learning Section -->
+        <div class="p-6 md:p-8 border-t border-gray-200 bg-white">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Guided Learning Module</h2>
+            <div class="bg-slate-50 p-6 rounded-lg">
+                
+                <!-- Step 1 -->
+                <div id="step-1" class="step active">
+                    <h3 class="text-lg font-semibold text-blue-900">Step 1: Flat Surface (Mass & Normal Force)</h3>
+                    <p class="mt-2 text-gray-700">Let's start simple. A block resting on a flat surface.</p>
+                    <ol class="list-decimal list-inside mt-2 text-gray-700 space-y-1">
+                        <li>Make sure the <strong class="text-blue-600">Angle of Inclination</strong> is <strong>0°</strong>.</li>
+                        <li>Check the box for <strong class="text-blue-600">"Mass (Mg) & Normal Force (R_N)"</strong>.</li>
+                        <li>Toggle <strong class="text-blue-600">"Show Equations"</strong>.</li>
+                    </ol>
+                    <p class="mt-3 font-medium">Key Concepts:</p>
+                    <ul class="list-disc list-inside text-gray-700">
+                        <li>The <strong class="text-blue-700">Weight (Mg)</strong> acts vertically down.</li>
+                        <li>The <strong class="text-green-700">Normal Force (R_N)</strong> is the support force from the surface, acting *perpendicular* to the surface.</li>
+                        <li>The forces are in equilibrium: <strong class="font-mono">ΣF_y = R_N - Mg = 0</strong>, so <strong class="font-mono">R_N = Mg</strong>.</li>
+                    </ul>
+                    <button onclick="nextStep(2)" class="mt-4 bg-blue-600 text-white px-5 py-2 rounded-lg shadow-md hover:bg-blue-700 transition duration-300">Got it! Next Step &rarr;</button>
+                </div>
+
+                <!-- Step 2 -->
+                <div id="step-2" class="step">
+                    <h3 class="text-lg font-semibold text-blue-900">Step 2: Flat Surface (Adding Friction)</h3>
+                    <p class="mt-2 text-gray-700">Now, let's try to move the block.</p>
+                    <ol class="list-decimal list-inside mt-2 text-gray-700 space-y-1">
+                        <li>Keep the angle at <strong>0°</strong>.</li>
+                        <li>Add <strong class="text-pink-600">"External Force 1 (F₁)"</strong>. This force pulls the block to the right.</li>
+                        <li>Select <strong class="text-yellow-600">"Impending Motion Up-Slope"</strong> (which is "to the right" in this case).</li>
+                    </ol>
+                    <p class="mt-3 font-medium text-gray-800">Question: The block is *about* to move right. What is the direction of the friction force (F_f)?</p>
+                    <div class="flex space-x-2 mt-2">
+                        <button onclick="checkAnswer(2, 'left')" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-100 transition-all duration-200">Opposite (Left)</button>
+                        <button onclick="checkAnswer(2, 'right')" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-100 transition-all duration-200">Same (Right)</button>
+                    </div>
+                </div>
+
+                <!-- Step 3 -->
+                <div id="step-3" class="step">
+                    <h3 class="text-lg font-semibold text-blue-900">Step 3: Inclined Plane (The Forces)</h3>
+                    <p class="mt-2 text-gray-700">This is the most important part. Let's tilt the plane. <strong class="text-red-600">Uncheck all forces first.</strong></p>
+                    <ol class="list-decimal list-inside mt-2 text-gray-700 space-y-1">
+                        <li>Click <strong class="text-red-600">"Reset All"</strong>.</li>
+                        <li>Set the <strong class="text-blue-600">Angle of Inclination</strong> to <strong>30°</strong>.</li>
+                        <li>Check <strong class="text-blue-600">"Mass (Mg) & Normal Force (R_N)"</strong>.</li>
+                    </ol>
+                    <p class="mt-3 font-medium text-gray-800">Question 1: Look at the visualization. What is the direction of the Weight (Mg)?</label>
+                    <div class="flex space-x-2 mt-2">
+                        <button onclick="checkAnswer(3.1, 'down')" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-100 transition-all duration-200">Vertically Down</button>
+                        <button onclick="checkAnswer(3.1, 'perp')" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-100 transition-all duration-200">Perpendicular to Incline</button>
+                    </div>
+                </div>
+                
+                <!-- Step 4 (triggered by JS) -->
+                <div id="step-4" class="step">
+                     <h3 class="text-lg font-semibold text-blue-900">Step 4: Resolving the Weight Vector</h3>
+                    <p class="mt-2 text-gray-700">Our FBD axes (x' and y') are *tilted* with the plane. The Weight vector (Mg) is not on either axis. We must resolve it into components that are parallel and perpendicular to the incline.</p>
+                    <ol class="list-decimal list-inside mt-2 text-gray-700 space-y-1">
+                        <li>The visualization now shows the components: <strong class="text-blue-700">Mg·sin(θ)</strong> (parallel) and <strong class="text-blue-700">Mg·cos(θ)</strong> (perpendicular).</li>
+                        <li>Toggle <strong class="text-blue-600">"Show Equations"</strong> to see this.</li>
+                    </ol>
+                    <p class="mt-3 font-medium text-gray-800">Question: Look at the ΣF_y' equation. Which component of weight does the Normal Force (R_N) balance?</p>
+                    <div class="flex space-x-2 mt-2">
+                        <button onclick="checkAnswer(4.1, 'cos')" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-100 transition-all duration-200">Mg·cos(θ)</button>
+                        <button onclick="checkAnswer(4.1, 'sin')" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-100 transition-all duration-200">Mg·sin(θ)</button>
+                    </div>
+                </div>
+
+                <!-- Step 5 (triggered by JS) -->
+                <div id="step-5" class="step">
+                    <h3 class="text-lg font-semibold text-blue-900">Step 5: Equilibrium on an Incline</h3>
+                    <p class="mt-2 text-gray-700">The component <strong class="text-blue-700">Mg·sin(θ)</strong> is trying to pull the block *down* the incline. Let's add friction to stop it.</p>
+                    <ol class="list-decimal list-inside mt-2 text-gray-700 space-y-1">
+                        <li>Select <strong class="text-yellow-600">"Impending Motion Down-Slope"</strong>.</li>
+                    </ol>
+                    <p class="mt-3 font-medium text-gray-800">Question: To prevent the block from sliding down, what direction must the friction force (F_f) act?</p>
+                    <div class="flex space-x-2 mt-2">
+                        <button onclick="checkAnswer(5, 'up')" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-100 transition-all duration-200">Up the Incline</button>
+                        <button onclick="checkAnswer(5, 'down')" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-100 transition-all duration-200">Down the Incline</button>
+                    </div>
+                </div>
+
+                <!-- Step 6 (triggered by JS) -->
+                <div id="step-6" class="step">
+                    <h3 class="text-lg font-semibold text-blue-900">Module Complete!</h3>
+                    <p class="mt-2 text-gray-700">You've mastered the core concepts! You've seen how:</p>
+                    <ul class="list-disc list-inside mt-3 text-gray-700 space-y-1">
+                        <li><strong class="text-green-700">Normal Force (R_N)</strong> is always *perpendicular* to the surface.</li>
+                        <li><strong class="text-blue-700">Weight (Mg)</strong> is always *vertically down*.</li>
+                        <li>On an incline, Weight (Mg) is resolved into <strong class="text-blue-700">Mg·cos(θ)</strong> (into the plane) and <strong class="text-blue-700">Mg·sin(θ)</strong> (down the plane).</li>
+                        <li><strong class="text-yellow-700">Friction (F_f)</strong> always *opposes* the impending motion.</li>
+                    </ul>
+                    <p class="mt-4 font-semibold text-lg text-blue-800">You are now in "Free Play" mode. Use the controls to explore any combination of forces, angles, and motion!</p>
+                    <button onclick="resetGuidedLearning()" class="mt-4 bg-gray-600 text-white px-5 py-2 rounded-lg shadow-md hover:bg-gray-700 transition duration-300">Restart Guided Learning</button>
+                </div>
+
+            </div>
+        <div class="modal-content">
+            <p id="modal-text" class="text-lg font-medium text-gray-800"></p>
+            <button id="modal-close-btn" class="mt-6 w-full bg-blue-600 text-white px-4 py-2.5 rounded-lg shadow-md hover:bg-blue-700 transition duration-300">
+                Continue
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Get all elements
+        const angleSlider = document.getElementById('angle-slider');
+        const angleValue = document.getElementById('angle-value');
+        const inclineGroup = document.getElementById('incline-group');
+        const angleArc = document.getElementById('angle-arc');
+        const angleText = document.getElementById('angle-text');
+        
+        // Checkboxes
+        const checkMass = document.getElementById('check-mass');
+        const checkF1 = document.getElementById('check-f1');
+        const checkF2 = document.getElementById('check-f2');
+        
+        // Radio buttons
+        const motionNone = document.getElementById('motion-none');
+        const motionUp = document.getElementById('motion-up');
+        const motionDown = document.getElementById('motion-down');
+        
+        // Visualization Elements
+        const block = document.getElementById('block');
+        const fbdAxes = document.getElementById('fbd-axes');
+        const fbdVectors = document.getElementById('fbd-vectors');
+        const vecRn = document.getElementById('vec-rn');
+        const vecF1 = document.getElementById('vec-f1');
+        const vecF2 = document.getElementById('vec-f2');
+        const vecFrictionUp = document.getElementById('vec-friction-up');
+        const vecFrictionDown = document.getElementById('vec-friction-down');
+        const vecWComps = document.getElementById('vec-w-comps');
+        const vecWGroup = document.getElementById('vec-w-group');
+        const wCompLine1 = document.getElementById('w-comp-line1');
+        const wCompLine2 = document.getElementById('w-comp-line2');
+        
+        // Toggles
+        const toggleFbd = document.getElementById('toggle-fbd');
+        const toggleEquations = document.getElementById('toggle-equations');
+        const equationDisplay = document.getElementById('equation-display');
+        const fbdDisplay = document.getElementById('fbd-display');
+        const fbdVectorsClone = document.getElementById('fbd-vectors-clone');
+        const fbdAxesTilted = document.getElementById('fbd-axes-tilted');
+        
+        // Equation Spans
+        const eqYRn = document.querySelector('[data-testid="eq-y-rn"]');
+        const eqYMgCos = document.querySelector('[data-testid="eq-y-mgcos"]');
+        const eqXF1 = document.querySelector('[data-testid="eq-x-f1"]');
+        const eqXF2 = document.querySelector('[data-testid="eq-x-f2"]');
+        const eqXFrictionUp = document.querySelector('[data-testid="eq-x-friction-up"]');
+        const eqXFrictionDown = document.querySelector('[data-testid="eq-x-friction-down"]');
+        const eqXMgSin = document.querySelector('[data-testid="eq-x-mgsin"]');
+        const frictionNote = document.getElementById('friction-note');
+        const angleNote = document.getElementById('angle-note');
+        
+        // Buttons
+        const resetBtn = document.getElementById('reset-btn');
+
+        // Modal Elements
+        const modal = document.getElementById('feedback-modal');
+        const modalText = document.getElementById('modal-text');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
+
+        // State
+        let currentAngle = 0;
+        let guidedStep = 1;
+        
+        // Main update function
+        function updateSimulation() {
+            // Get current state
+            currentAngle = parseInt(angleSlider.value);
+            const isMassChecked = checkMass.checked;
+            const isF1Checked = checkF1.checked;
+            const isF2Checked = checkF2.checked;
+            const motion = document.querySelector('input[name="motion"]:checked').value;
+            
+            // --- 1. Update Visualization ---
+            
+            // Update angle text
+            angleValue.textContent = currentAngle;
+            
+            // Rotate the inclined plane
+            inclineGroup.setAttribute('transform', `rotate(${-currentAngle} 0 100)`);
+            
+            // Update angle arc
+            if (currentAngle === 0) {
+                angleArc.setAttribute('d', 'M 50 100 L 50 100'); // Hide
+                angleText.classList.add('hidden');
+            } else {
+                const angleRad = currentAngle * Math.PI / 180;
+                const endX = 50 + 30 * Math.cos(-angleRad);
+                const endY = 100 + 30 * Math.sin(-angleRad);
+                angleArc.setAttribute('d', `M 80 100 A 30 30 0 0 1 ${endX} ${endY}`);
+                angleText.classList.remove('hidden');
+            }
+            
+            // Toggle block visibility
+            block.classList.toggle('hidden', !isMassChecked);
+            fbdAxes.classList.toggle('hidden', !isMassChecked);
+            
+            // Toggle FBD Vectors
+            fbdVectors.classList.toggle('hidden', !isMassChecked);
+            vecRn.classList.toggle('hidden', !isMassChecked);
+            vecF1.classList.toggle('hidden', !isF1Checked);
+            vecF2.classList.toggle('hidden', !isF2Checked);
+
+            // Weight vector
+            vecWGroup.classList.toggle('hidden', !isMassChecked);
+            vecWComps.classList.toggle('hidden', currentAngle === 0); // Hide components at 0 angle
+
+            if (currentAngle > 0 && isMassChecked) {
+                // Update component helper lines
+                const angleRad = currentAngle * Math.PI / 180;
+                const sin = Math.sin(angleRad);
+                const cos = Math.cos(angleRad);
+                
+                // W vector line
+                const w_end_x = 50 * sin;
+                const w_end_y = 50 * cos;
+                vecWGroup.setAttribute('transform', `translate(0, 75) rotate(${-currentAngle} 0 -100)`);
+                
+                // Adjust component line length based on angle
+                const mgSinLen = 50 * sin;
+                const mgCosLen = 50 * cos;
+
+                // Wx' component
+                vecWComps.querySelector('line').setAttribute('x2', mgSinLen);
+                vecWComps.querySelector('line').setAttribute('y2', 0);
+                vecWComps.querySelector('polygon').setAttribute('points', `${mgSinLen+5},0 ${mgSinLen},5 ${mgSinLen},-5`);
+                vecWComps.querySelector('text').setAttribute('x', mgSinLen / 2);
+                vecWComps.querySelector('text').setAttribute('y', -4);
+
+                // Wy' component
+                vecWComps.querySelectorAll('line')[1].setAttribute('x2', 0);
+                vecWComps.querySelectorAll('line')[1].setAttribute('y2', mgCosLen);
+                vecWComps.querySelectorAll('polygon')[1].setAttribute('points', `0,${mgCosLen+5} -5,${mgCosLen} 5,${mgCosLen}`);
+                vecWComps.querySelectorAll('text')[1].setAttribute('x', -30);
+                vecWComps.querySelectorAll('text')[1].setAttribute('y', mgCosLen / 2 + 5);
+
+                // Connector lines
+                wCompLine1.setAttribute('x1', w_end_x);
+                wCompLine1.setAttribute('y1', w_end_y);
+                wCompLine1.setAttribute('x2', mgSinLen * cos);
+                wCompLine1.setAttribute('y2', -mgSinLen * sin);
+                wCompLine2.setAttribute('x1', w_end_x);
+                wCompLine2.setAttribute('y1', w_end_y);
+                wCompLine2.setAttribute('x2', -mgCosLen * sin);
+                wCompLine2.setAttribute('y2', mgCosLen * cos);
+                
+                // Re-position the main weight vector to start from block center and go down
+                // This is complex, so we'll simplify by attaching it to the rotated group
+                // and rotating it *back*
+                const blockCenterX = 0;
+                const blockCenterY = -25;
+                vecWGroup.setAttribute('transform', `translate(${blockCenterX}, ${blockCenterY}) rotate(${currentAngle} 0 0)`);
+
+            } else {
+                 // On flat surface, just position it
+                 vecWGroup.setAttribute('transform', `translate(0, -25) rotate(0 0 0)`);
+            }
+
+            // Friction logic
+            let showFrictionUp = false;
+            let showFrictionDown = false;
+            
+            if (motion === 'up') {
+                showFrictionDown = true; // Motion is UP, friction acts DOWN
+            } else if (motion === 'down') {
+                showFrictionUp = true; // Motion is DOWN, friction acts UP
+            }
+            vecFrictionUp.classList.toggle('hidden', !showFrictionUp);
+            vecFrictionDown.classList.toggle('hidden', !showFrictionDown);
+            
+            // --- 2. Update Equations ---
+            if (equationDisplay.classList.contains('hidden')) {
+                // If equations are hidden, don't bother updating
+                // This will be handled by the toggle button
+                updateFBD();
+                return;
+            }
+
+            // Y' (Perpendicular) Equation
+            eqYRn.classList.toggle('hidden', !isMassChecked);
+            eqYMgCos.classList.toggle('hidden', !isMassChecked || currentAngle === 0);
+            
+            // X' (Parallel) Equation
+            eqXF1.classList.toggle('hidden', !isF1Checked);
+            eqXF2.classList.toggle('hidden', !isF2Checked);
+            eqXMgSin.classList.toggle('hidden', !isMassChecked || currentAngle === 0);
+            
+            eqXFrictionUp.classList.toggle('hidden', !showFrictionUp);
+            eqXFrictionDown.classList.toggle('hidden', !showFrictionDown);
+
+            // Notes
+            if (motion === 'up') {
+                frictionNote.textContent = 'F_f opposes impending motion (acts down-slope)';
+            } else if (motion === 'down') {
+                frictionNote.textContent = 'F_f opposes impending motion (acts up-slope)';
+            } else {
+                frictionNote.textContent = 'No friction (no impending motion).';
+            }
+            
+            if (currentAngle === 0) {
+                angleNote.textContent = 'On flat surface: θ=0, sin(θ)=0, cos(θ)=1. Mg·cos(θ) becomes Mg.';
+                eqYMgCos.textContent = ' - Mg'; // Special case for 0 degrees
+            } else {
+                angleNote.textContent = `At θ=${currentAngle}°`;
+                eqYMgCos.textContent = ' - Mg·cos(θ)';
+            }
+
+            // --- 3. Update FBD View ---
+            updateFBD();
+        }
+        
+        // FBD Display Logic
+        function updateFBD() {
+            if (fbdDisplay.classList.contains('hidden')) {
+                fbdVectorsClone.innerHTML = '';
+                return;
+            }
+            
+            // Clone all visible vectors from the main FBD
+            fbdVectorsClone.innerHTML = ''; // Clear previous
+            fbdAxesTilted.setAttribute('transform', `rotate(${-currentAngle} 0 0)`);
+
+            const vectorsToClone = [
+                vecRn, vecF1, vecF2, vecFrictionUp, vecFrictionDown
+            ];
+            
+            vectorsToClone.forEach(vec => {
+                if (!vec.classList.contains('hidden')) {
+                    const clone = vec.cloneNode(true);
+                    // Reposition to start from origin (0,0)
+                    clone.setAttribute('transform', 'translate(0, 0) scale(0.8)'); // scale to fit
+                    // Remove text labels from lines
+                    clone.querySelectorAll('text').forEach(t => t.remove());
+                    
+                    // Manually adjust vector start/end to origin
+                    const line = clone.querySelector('line');
+                    if (vec === vecRn) line.setAttribute('transform', 'translate(0, 25)');
+                    if (vec === vecF1) line.setAttribute('transform', 'translate(-30, 25)');
+                    if (vec === vecF2) line.setAttribute('transform', 'translate(30, 25)');
+                    if (vec === vecFrictionUp) line.setAttribute('transform', 'translate(30, -5)');
+                    if (vec === vecFrictionDown) line.setAttribute('transform', 'translate(-30, -5)');
+
+                    fbdVectorsClone.appendChild(clone);
+                }
+            });
+
+            // Handle weight vector separately
+            if (checkMass.checked) {
+                const wClone = vecWGroup.cloneNode(true);
+                wClone.setAttribute('transform', `rotate(${currentAngle} 0 0) scale(0.8) translate(0, 25)`);
+                wClone.querySelectorAll('text').forEach(t => t.remove());
+                fbdVectorsClone.appendChild(wClone);
+
+                if (currentAngle > 0) {
+                    const wCompsClone = vecWComps.cloneNode(true);
+                    wCompsClone.setAttribute('transform', `scale(0.8)`);
+                    wCompsClone.querySelectorAll('text').forEach(t => t.remove());
+                    fbdVectorsClone.appendChild(wCompsClone);
+                }
+            }
+        }
+        
+        // Toggle Buttons
+        toggleFbd.addEventListener('click', () => {
+            fbdDisplay.classList.toggle('hidden');
+            const isHidden = fbdDisplay.classList.contains('hidden');
+            toggleFbd.textContent = isHidden ? 'Show FBD' : 'Hide FBD';
+            toggleFbd.classList.toggle('bg-white', isHidden);
+            toggleFbd.classList.toggle('text-gray-700', isHidden);
+            toggleFbd.classList.toggle('bg-blue-600', !isHidden);
+            toggleFbd.classList.toggle('text-white', !isHidden);
+            toggleFbd.classList.toggle('border-gray-300', isHidden);
+            toggleFbd.classList.toggle('border-blue-600', !isHidden);
+            updateFBD();
+        });
+        
+        toggleEquations.addEventListener('click', () => {
+            equationDisplay.classList.toggle('hidden');
+            const isHidden = equationDisplay.classList.contains('hidden');
+            toggleEquations.textContent = isHidden ? 'Show Equations' : 'Hide Equations';
+            toggleEquations.classList.toggle('bg-white', isHidden);
+            toggleEquations.classList.toggle('text-gray-700', isHidden);
+            toggleEquations.classList.toggle('bg-blue-600', !isHidden);
+            toggleEquations.classList.toggle('text-white', !isHidden);
+            toggleEquations.classList.toggle('border-gray-300', isHidden);
+            toggleEquations.classList.toggle('border-blue-600', !isHidden);
+            updateSimulation(); // Need to run full update to populate equations
+        });
+        
+        // Reset Function
+        function reset() {
+            angleSlider.value = 0;
+            checkMass.checked = false;
+            checkF1.checked = false;
+            checkF2.checked = false;
+            motionNone.checked = true;
+            
+            // Hide outputs
+            if (!fbdDisplay.classList.contains('hidden')) {
+                toggleFbd.click();
+            }
+            if (!equationDisplay.classList.contains('hidden')) {
+                toggleEquations.click();
+            }
+            
+            updateSimulation();
+        }
+        resetBtn.addEventListener('click', reset);
+        
+        // Event Listeners
+        angleSlider.addEventListener('input', updateSimulation);
+        checkMass.addEventListener('change', updateSimulation);
+        checkF1.addEventListener('change', updateSimulation);
+        checkF2.addEventListener('change', updateSimulation);
+        document.querySelectorAll('input[name="motion"]').forEach(radio => {
+            radio.addEventListener('change', updateSimulation);
+        });
+        
+        // --- Guided Learning Logic ---
+        function nextStep(step) {
+            guidedStep = step;
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+            document.getElementById(`step-${step}`).classList.add('active');
+            
+            // Auto-setup for the step
+            if (step === 2) {
+                reset();
+                angleSlider.value = 0;
+                checkMass.checked = true;
+                updateSimulation();
+            } else if (step === 3) {
+                reset();
+                updateSimulation();
+            }
+        }
+
+        function resetGuidedLearning() {
+            reset();
+            nextStep(1);
+        }
+
+        function showModal(text) {
+            modalText.textContent = text;
+            modal.classList.add('show');
+        }
+
+        modalCloseBtn.addEventListener('click', () => {
+            modal.classList.remove('show');
+        });
+        
+        function checkAnswer(step, answer) {
+            if (step === 2) {
+                if (answer === 'left') {
+                    showModal("Correct! Friction always opposes the impending motion. The block wants to move right, so friction pulls left.");
+                    // Auto-check the required boxes for the student
+                    checkF1.checked = true;
+                    motionUp.checked = true;
+                    updateSimulation();
+                    // Show next step button
+                    const btn = document.createElement('button');
+                    btn.textContent = 'Next Step: Inclined Planes &rarr;';
+                    btn.className = 'mt-4 bg-blue-600 text-white px-5 py-2 rounded-lg shadow-md hover:bg-blue-700 transition duration-300';
+                    btn.onclick = () => nextStep(3);
+                    document.getElementById('step-2').appendChild(btn);
+                    // Disable answer buttons
+                    document.querySelectorAll('#step-2 button').forEach(b => {
+                        b.disabled = true;
+                        b.classList.add('opacity-50', 'cursor-not-allowed');
+                    });
+                } else {
+                    showModal("Not quite. Friction *opposes* motion. Try again.");
+                }
+            }
+            if (step === 3.1) {
+                if (answer === 'down') {
+                    showModal("Correct! Weight (Mg) *always* acts vertically down, towards the center of the Earth, regardless of the incline.");
+                    // Show next question
+                    const q2 = document.createElement('div');
+                    q2.innerHTML = `
+                        <p class="mt-3 font-medium text-gray-800">Question 2: Excellent. Now, what is the direction of the Normal Force (R_N)?</p>
+                        <div class="flex space-x-2 mt-2">
+                            <button onclick="checkAnswer(3.2, 'perp')" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-100 transition-all duration-200">Perpendicular to Incline</button>
+                            <button onclick="checkAnswer(3.2, 'up')" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-100 transition-all duration-200">Vertically Up</button>
+                        </div>
+                    `;
+                    document.getElementById('step-3').appendChild(q2);
+                    // Disable Q1 buttons
+                    document.querySelectorAll('#step-3 button').forEach(b => {
+                        b.disabled = true;
+                        b.classList.add('opacity-50', 'cursor-not-allowed');
+                    });
+                } else {
+                    showModal("Not quite. That's the direction of the Normal Force. Weight always points straight down. Try again.");
+                }
+            }
+            if (step === 3.2) {
+                if (answer === 'perp') {
+                    showModal("Perfect! The Normal Force (R_N) is *always* perpendicular to the surface that provides the support.");
+                    // Go to next step
+                    nextStep(4);
+                } else {
+                    showModal("Not quite. The Normal Force must be perpendicular (or 'normal') to the surface. Try again.");
+                }
+            }
+            if (step === 4.1) {
+                if (answer === 'cos') {
+                    showModal("Exactly right! The Normal Force (R_N) balances the perpendicular component of weight, Mg·cos(θ).");
+                     // Show next step button
+                    const btn = document.createElement('button');
+                    btn.textContent = 'Next Step &rarr;';
+                    btn.className = 'mt-4 bg-blue-600 text-white px-5 py-2 rounded-lg shadow-md hover:bg-blue-700 transition duration-300';
+                    btn.onclick = () => nextStep(5);
+                    document.getElementById('step-4').appendChild(btn);
+                    // Disable answer buttons
+                    document.querySelectorAll('#step-4 button').forEach(b => {
+                        b.disabled = true;
+                        b.classList.add('opacity-50', 'cursor-not-allowed');
+                    });
+                } else {
+                    showModal("Not quite. Look at the ΣF_y' equation. R_N is on the y' axis. Which other force component is on the y' axis?");
+                }
+            }
+            if (step === 5) {
+                if (answer === 'up') {
+                    showModal("You got it! The block wants to slide *down* due to Mg·sin(θ), so the friction force (F_f) must act *up* the incline to oppose it.");
+                    // Auto-check
+                    motionDown.checked = true;
+                    updateSimulation();
+                    // Go to final step
+                    const btn = document.createElement('button');
+                    btn.textContent = 'Finish Learning Module &rarr;';
+                    btn.className = 'mt-4 bg-blue-600 text-white px-5 py-2 rounded-lg shadow-md hover:bg-blue-700 transition duration-300';
+                    btn.onclick = () => nextStep(6);
+                    document.getElementById('step-5').appendChild(btn);
+                    // Disable answer buttons
+                    document.querySelectorAll('#step-5 button').forEach(b => {
+                        b.disabled = true;
+                        b.classList.add('opacity-50', 'cursor-not-allowed');
+                    });
+                } else {
+                    showModal("Not quite. Remember, friction *opposes* impending motion. The block is about to slide *down*. Try again.");
+                }
+            }
+        }
+        
+        // Initial call
+        updateSimulation();
+        
+    </script>
+</body>
+</html>
