@@ -287,11 +287,17 @@
                                 <line id="w-comp-line2" x1="0" y1="0" x2="0" y2="0" stroke="#007AFF" stroke-width="1.5" stroke-dasharray="3,3" />
                             </g>
 
-                            <!-- Impending Motion Arrow -->
-                            <g id="vec-motion" class="hidden">
+                            <!-- Impending Motion Arrow (UP) -->
+                            <g id="vec-motion-up" class="hidden">
                                 <line x1="-60" y1="-65" x2="60" y2="-65" stroke="#383838" stroke-width="2" stroke-dasharray="5,5" />
-                                <polygon id="vec-motion-arrow" points="65,-65 55,-60 55,-70" fill="#383838" />
-                                <text id="vec-motion-text" x="-30" y="-75" font-size="10" fill="#383838" font-weight="bold">Impending Motion</text>
+                                <polygon points="65,-65 55,-60 55,-70" fill="#383838" />
+                                <text x="-30" y="-75" font-size="10" fill="#383838" font-weight="bold">Impending Motion Up-Slope</text>
+                            </g>
+                            <!-- Impending Motion Arrow (DOWN) -->
+                            <g id="vec-motion-down" class="hidden">
+                                <line x1="-60" y1="-65" x2="60" y2="-65" stroke="#383838" stroke-width="2" stroke-dasharray="5,5" />
+                                <polygon points="-65,-65 -55,-60 -55,-70" fill="#383838" />
+                                <text x="-30" y="-75" font-size="10" fill="#383838" font-weight="bold">Impending Motion Down-Slope</text>
                             </g>
 
                         </g>
@@ -499,9 +505,8 @@
         const vecWGroup = document.getElementById('vec-w-group');
         const wCompLine1 = document.getElementById('w-comp-line1');
         const wCompLine2 = document.getElementById('w-comp-line2');
-        const vecMotion = document.getElementById('vec-motion');
-        const vecMotionArrow = document.getElementById('vec-motion-arrow');
-        const vecMotionText = document.getElementById('vec-motion-text');
+        const vecMotionUp = document.getElementById('vec-motion-up');
+        const vecMotionDown = document.getElementById('vec-motion-down');
         
         // Toggles
         const toggleEquations = document.getElementById('toggle-equations');
@@ -619,26 +624,22 @@
             // Friction & Impending Motion logic
             let showFrictionUp = false;
             let showFrictionDown = false;
-            let showMotionArrow = false;
+            let showMotionUpArrow = false;
+            let showMotionDownArrow = false;
             
             if (motion === 'up') {
                 // Impending motion is UP, friction acts DOWN
                 showFrictionDown = true; 
-                showMotionArrow = true;
-                vecMotion.setAttribute('transform', 'rotate(0)');
-                vecMotionText.textContent = "Impending Motion Up-Slope";
-                vecMotionArrow.setAttribute('points', '65,-65 55,-60 55,-70'); // Point right
+                showMotionUpArrow = true;
             } else if (motion === 'down') {
                 // Impending motion is DOWN, friction acts UP
                 showFrictionUp = true; 
-                showMotionArrow = true;
-                vecMotion.setAttribute('transform', 'scale(-1, 1)'); // Flip arrow
-                vecMotionText.textContent = "Impending Motion Down-Slope";
-                vecMotionArrow.setAttribute('points', '65,-65 55,-60 55,-70'); // Point right (will be flipped)
+                showMotionDownArrow = true;
             }
             vecFrictionUp.classList.toggle('hidden', !showFrictionUp);
             vecFrictionDown.classList.toggle('hidden', !showFrictionDown);
-            vecMotion.classList.toggle('hidden', !showMotionArrow);
+            vecMotionUp.classList.toggle('hidden', !showMotionUpArrow);
+            vecMotionDown.classList.toggle('hidden', !showMotionDownArrow);
 
             
             // --- 2. Update Equations ---
