@@ -112,6 +112,26 @@
         .shadow-card {
              box-shadow: 0 4px 16px rgba(44,51,91,0.07);
         }
+        /* New Spotlight Animation */
+        .spotlight {
+            box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.5);
+            border-radius: 16px;
+            animation: pulse 1.5s infinite;
+            transition: box-shadow 0.3s ease-in-out;
+            margin: -4px; /* Offset for the shadow */
+            padding: 4px; /* Add padding back */
+        }
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(0, 122, 255, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(0, 122, 255, 0);
+            }
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -135,6 +155,19 @@
             <p class="mt-2 text-lg" style="font-size: 1.125rem;">Chapters 5, 5.3 & 6.1: Free Body Diagrams, Friction & Equilibrium</p>
         </div>
 
+        <!-- NEW: Instructions Section -->
+        <div class="p-6 bg-white border-b border-gray-200">
+            <h2 class="text-2xl font-semibold mb-3">How to Use This Simulation</h2>
+            <ol class="list-decimal list-inside space-y-2" style="font-size: 1.125rem;">
+                <li>Start with the <strong class="text-[#007AFF]">"Guided Learning"</strong> module (bottom-left).</li>
+                <li>Follow the steps. The required <strong class="text-[#007AFF]">"Controls"</strong> (top-left) for your current step will glow.</li>
+                <li>Observe the <strong class="text-[#383838]">"Visualization"</strong> (top-right) as you change the controls.</li>
+                <li>Check the <strong class="text-[#007AFF]">"Equations"</strong> (bottom-right) to see how the math changes.</li>
+            </ol>
+        </div>
+        <!-- END: Instructions Section -->
+
+
         <!-- Simulation Area -->
         <!-- This is now a vertical stacking container -->
         <div class="flex flex-col">
@@ -146,13 +179,13 @@
                     <h2 class="text-3xl font-semibold mb-6 sticky top-0 bg-white pt-2 pb-4 z-10">Controls</h2>
 
                     <!-- Angle Slider -->
-                    <div class="mb-8">
+                    <div id="control-angle" class="mb-8 p-3 -m-3 rounded-2xl transition-all duration-300">
                         <label for="angle-slider" class="block font-semibold mb-2 uppercase" style="font-size: 1rem;">Angle (<span id="angle-value">0</span>°)</label>
                         <input type="range" id="angle-slider" min="0" max="89" value="0" class="mt-2">
                     </div>
 
                     <!-- Select Forces -->
-                    <div class="mb-8">
+                    <div id="control-forces" class="mb-8 p-3 -m-3 rounded-2xl transition-all duration-300">
                         <h3 class="text-2xl font-semibold mb-4">Forces</h3>
                         <div class="space-y-3">
                             <div class="flex items-center">
@@ -171,7 +204,7 @@
                     </div>
 
                     <!-- Impending Motion -->
-                    <div class="mb-8">
+                    <div id="control-friction" class="mb-8 p-3 -m-3 rounded-2xl transition-all duration-300">
                         <h3 class="text-2xl font-semibold mb-4">Friction (F_f)</h3>
                         <p class="text-sm text-gray-500 mb-3">Friction appears when impending motion is set.</p>
                         <div class="space-y-3">
@@ -191,7 +224,7 @@
                     </div>
                     
                     <!-- Reset Button -->
-                    <div class="mt-8">
+                    <div id="control-reset" class="mt-8">
                         <button id="reset-btn" class="w-full bg-white text-[#FF6E6C] font-bold uppercase rounded-2xl px-6 py-3 shadow-sm hover:bg-[#FFD7D1] transition-all duration-200 ease-in-out border border-[#FF6E6C]">
                             Reset All
                         </button>
@@ -436,7 +469,7 @@
                     <h2 class="text-3xl font-semibold mb-6 sticky top-0 bg-white pt-2 pb-4 z-10">Equations</h2>
                     
                     <!-- Toggles -->
-                    <div class="flex space-x-2 mb-4">
+                    <div id="control-equations" class="flex space-x-2 mb-4 p-3 -m-3 rounded-2xl transition-all duration-300">
                         <!-- <button id="toggle-fbd" class="toggle-btn flex-1 bg-white border border-[#d3d3d3] rounded-2xl px-3 py-3 font-bold uppercase hover:bg-gray-100 transition-all duration-200 ease-in-out" style="font-size: 1rem;">Show FBD</button> -->
                         <button id="toggle-equations" class="toggle-btn flex-1 bg-white border border-[#d3d3d3] rounded-2xl px-3 py-3 font-bold uppercase hover:bg-gray-100 transition-all duration-200 ease-in-out" style="font-size: 1rem;">Show Equations</button>
                     </div>
@@ -531,14 +564,57 @@
         const modalText = document.getElementById('modal-text');
         const modalCloseBtn = document.getElementById('modal-close-btn');
 
+        // Spotlight Control Wrappers
+        const controlAngle = document.getElementById('control-angle');
+        const controlForces = document.getElementById('control-forces');
+        const controlFriction = document.getElementById('control-friction');
+        const controlEquations = document.getElementById('control-equations');
+        const controlReset = document.getElementById('control-reset');
+        const allControls = [controlAngle, controlForces, controlFriction, controlEquations, controlReset];
+
         // State
-        let currentAngle = 0;
+        // let currentAngle = 0; // This was the problematic line
         let guidedStep = 1;
         
+        // --- Helper function for Scaffolding ---
+        function clearSpotlights() {
+            allControls.forEach(control => control.classList.remove('spotlight'));
+        }
+
+        function updateSpotlight(step) {
+            clearSpotlights();
+            switch (step) {
+                case 1:
+                    controlAngle.classList.add('spotlight');
+                    controlForces.classList.add('spotlight');
+                    controlEquations.classList.add('spotlight');
+                    break;
+                case 2:
+                    controlForces.classList.add('spotlight');
+                    controlFriction.classList.add('spotlight');
+                    break;
+                case 3:
+                    controlReset.classList.add('spotlight');
+                    controlAngle.classList.add('spotlight');
+                    controlForces.classList.add('spotlight');
+                    break;
+                case 4:
+                    controlEquations.classList.add('spotlight');
+                    break;
+                case 5:
+                    controlFriction.classList.add('spotlight');
+                    break;
+                case 6:
+                    clearSpotlights(); // Free play, no spotlights
+                    break;
+            }
+        }
+
         // Main update function
         function updateSimulation() {
             // Get current state
-            currentAngle = parseInt(angleSlider.value);
+            // FIX: Declare currentAngle locally with const
+            const currentAngle = parseInt(angleSlider.value);
             const isMassChecked = checkMass.checked;
             const isTChecked = checkT.checked;
             const isPChecked = checkP.checked;
@@ -730,6 +806,7 @@
             guidedStep = step;
             document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
             document.getElementById(`step-${step}`).classList.add('active');
+            updateSpotlight(step); // <-- ADDED: Update spotlight on step change
             
             // Auto-setup for the step
             if (step === 2) {
@@ -751,6 +828,7 @@
         function resetGuidedLearning() {
             reset();
             nextStep(1);
+            // updateSpotlight(1) is already called by nextStep(1)
         }
 
         function showModal(text) {
@@ -871,6 +949,7 @@
         
         // Initial call
         updateSimulation();
+        updateSpotlight(1); // Spotlight Step 1 controls on load
         
     </script>
 </body>
