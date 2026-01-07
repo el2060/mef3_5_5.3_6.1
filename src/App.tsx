@@ -24,7 +24,7 @@ function App() {
 
   const nextStep = (step: number) => {
     setGuidedLearning(prev => ({ ...prev, currentStep: step }));
-    
+
     // Auto-setup for steps
     if (step === 2) {
       resetSimulation();
@@ -40,10 +40,12 @@ function App() {
     resetSimulation();
     setGuidedLearning(initialGuidedLearningState);
   };
-  
+
   const resetAll = () => {
     resetSimulation();
-    setGuidedLearning(initialGuidedLearningState);
+    // Do NOT reset guided learning progress (step), so user stays on current step.
+    // Only reset if completely restarting (which can be done via refreshing or a separate 'Restart Tutorial' if needed).
+    // setGuidedLearning(initialGuidedLearningState); 
   };
 
   const showFeedback = (text: string) => {
@@ -65,18 +67,18 @@ function App() {
 
   return (
     <div className="min-h-screen bg-neutral-bg p-2 md:p-4">
-      <Modal 
+      <Modal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
         content={modalContent}
       />
-      
+
       <div className="max-w-[1800px] mx-auto bg-white rounded-2xl shadow-card overflow-hidden border border-gray-200/50">
-  <Header onShowInfo={showAppInfo} />
-        
+        <Header onShowInfo={showAppInfo} />
+
         {/* Main Grid Layout - 3 columns on large screens */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
-          
+
           {/* LEFT: Guided Learning - Sticky on large screens */}
           <div className="lg:col-span-4 border-b lg:border-b-0 lg:border-r border-gray-200">
             <div className="lg:sticky lg:top-0 lg:max-h-screen lg:overflow-y-auto">
@@ -93,16 +95,16 @@ function App() {
               <Instructions />
             </div>
           </div>
-          
+
           {/* CENTER: Visualization - Takes most space */}
           <div className="lg:col-span-5 border-b lg:border-b-0 lg:border-r border-gray-200">
             <Visualization simulation={simulation} />
-            <Equations 
-              simulation={simulation} 
-              onToggle={() => updateSimulation({ showEquations: !simulation.showEquations })} 
+            <Equations
+              simulation={simulation}
+              onToggle={() => updateSimulation({ showEquations: !simulation.showEquations })}
             />
           </div>
-          
+
           {/* RIGHT: Controls - Sticky on large screens */}
           <div className="lg:col-span-3">
             <div className="lg:sticky lg:top-0 lg:max-h-screen lg:overflow-y-auto">
@@ -114,7 +116,7 @@ function App() {
               />
             </div>
           </div>
-          
+
         </div>
       </div>
     </div>

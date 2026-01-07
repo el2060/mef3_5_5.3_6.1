@@ -1,3 +1,4 @@
+import React from 'react';
 import { SimulationState } from '../types/simulation';
 import { calculateForces } from '../utils/physics';
 
@@ -10,12 +11,21 @@ const Visualization = ({ simulation }: VisualizationProps) => {
   const { angle, showMass, showTension, showPush, motionDirection, push } = simulation;
   const { weight, normalForce, friction, tension } = forces;
 
-  // SVG dimensions - increased for better visibility & responsiveness
+  // Zoom State
+  const [zoom, setZoom] = React.useState(1.0);
+
+  // SVG dimensions
   const width = 900;
   const height = 650;
-  const padding = 70; // Padding to keep arrows inside
+  const padding = 70;
   const centerX = width / 2;
   const centerY = height * 0.6;
+
+  // ViewBox for Zoom
+  const viewBoxWidth = width / zoom;
+  const viewBoxHeight = height / zoom;
+  const viewBoxX = (width - viewBoxWidth) / 2;
+  const viewBoxY = (height - viewBoxHeight) / 2;
 
   // Incline parameters
   const inclineLength = 280;
@@ -23,117 +33,86 @@ const Visualization = ({ simulation }: VisualizationProps) => {
   const inclineEndX = centerX + inclineLength * Math.cos(angleRad);
   const inclineEndY = centerY - inclineLength * Math.sin(angleRad);
 
-  // Block position (middle of incline)
+  // Block position
   const blockX = centerX + (inclineLength / 2) * Math.cos(angleRad);
   const blockY = centerY - (inclineLength / 2) * Math.sin(angleRad);
   const blockSize = 45;
 
-  // Dynamic force scaling - ensures arrows stay within bounds
+  // Dynamic force scaling
   const maxForce = Math.max(weight, normalForce, friction, tension, push, 1);
   const availableSpace = Math.min(width - 2 * padding, height - 2 * padding);
-  // Increase max scale to allow arrows to be larger, but still clamped to avoid explosion
   const forceScale = Math.min(1.5, availableSpace / maxForce / 1.5);
 
-  // Track placed label bounding boxes to avoid overlap (simple collision avoidance)
-  const placedLabels: { x: number; y: number; w: number; h: number }[] = [];
+  // Helper: Get origin for force vectors on the block
+  const getForceOrigin = (position: 'center' | 'top' | 'bottom' | 'left' | 'right') => {
+    // Basic center
+    let x = blockX;
+    let y = blockY;
 
-  const registerLabelPosition = (x: number, y: number, text: string, fontSize = 16) => {
-    const approxCharWidth = fontSize * 0.6; // heuristic
-    const paddingBox = 6;
-    const w = text.length * approxCharWidth + paddingBox * 2;
-    const h = fontSize + paddingBox * 2;
-    let newX = x - w / 2; // convert to top-left
-    let newY = y - h / 2;
+    // Adjust based on rotation
+    // We are rotating around blockX, blockY by 'angle' degrees
+    // But generating points relative to unrotated block then rotating is easier?
+    // Actually, simple offset along rotated axes is best.
 
-    // Try shifting if overlapping existing labels (spiral / iterative offset)
-    const maxAttempts = 25;
-    let attempt = 0;
-    let offsetRadius = 0;
-    let angleStep = Math.PI / 4; // 45 deg increments
-    while (attempt < maxAttempts) {
-      const overlaps = placedLabels.some(b => !(newX + w < b.x || newX > b.x + b.w || newY + h < b.y || newY > b.y + b.h));
-      if (!overlaps) break;
-      attempt++;
-      offsetRadius += 10; // increase radius gradually
-      const theta = attempt * angleStep;
-      newX = x - w / 2 + offsetRadius * Math.cos(theta);
-      newY = y - h / 2 + offsetRadius * Math.sin(theta);
+    // Perpendicular vector (up-left relative to incline): (-sin, -cos)
+    // Parallel vector (down-right relative to incline): (cos, -sin) -- wait, y is down in SVG
+
+    // Local Axes:
+    // x' (Parallel Down-Slope): dx = cos(angle), dy = -sin(angle)  <-- Wait, incline goes up-right.
+    // Incline End (Right): x increases, y decreases.
+    // So "Parallel Up-Slope" vector is (cos, -sin). "Parallel Down-Slope" is (-cos, sin).
+
+    // y' (Perpendicular Up): (-sin, -cos)
+
+    // Wait, let's verify visual:
+    // Normal Force points Perpendicular UP. 
+    // Top face of block is in direction of y'.
+
+    const half = blockSize / 2;
+    // Vectors for block orientation
+    const upSlopeX = Math.cos(angleRad);
+    const upSlopeY = -Math.sin(angleRad);
+    const perpUpX = -Math.sin(angleRad); // Normal direction (Standard Normal to surface?)
+    // Vector (-sin, -cos) is "Up-Left" if angle=0 (0, -1). Yes.
+    const perpUpY = -Math.cos(angleRad);
+
+    switch (position) {
+      case 'center': return { x, y };
+      case 'top': return { x: x + perpUpX * half, y: y + perpUpY * half };
+      case 'bottom': return { x: x - perpUpX * half, y: y - perpUpY * half };
+      // "Right" side of block relative to incline (facing up slope)
+      case 'right': return { x: x + upSlopeX * half, y: y + upSlopeY * half };
+      // "Left" side
+      case 'left': return { x: x - upSlopeX * half, y: y - upSlopeY * half };
     }
-    placedLabels.push({ x: newX, y: newY, w, h });
-    return { x: newX + w / 2, y: newY + h / 2, w, h }; // return center-based for text anchor
+    return { x, y };
   };
 
-  // Force origin offsets to prevent overlap
-  const getForceOrigin = (offsetType: 'center' | 'left' | 'right' | 'top') => {
-    const offset = 18; // pixels from center
-    switch (offsetType) {
-      case 'left':
-        return { x: blockX - offset * Math.cos(angleRad), y: blockY + offset * Math.sin(angleRad) };
-      case 'right':
-        return { x: blockX + offset * Math.cos(angleRad), y: blockY - offset * Math.sin(angleRad) };
-      case 'top':
-        return { x: blockX, y: blockY - offset };
-      default:
-        return { x: blockX, y: blockY };
-    }
-  };
-
-  // Helper to draw arrows with better label positioning
-  const drawArrow = (
-    x1: number,
-    y1: number,
-    x2: number,
-    y2: number,
-    color: string,
-    label: string,
-    labelOffset: { x: number; y: number } = { x: 0, y: 0 },
-    fontSize = 16
-  ) => {
-    const dx = x2 - x1;
-    const dy = y2 - y1;
-    const length = Math.sqrt(dx * dx + dy * dy);
-
-    if (length < 1) return null; // Don't draw zero-length arrows
-
-    const arrowAngle = Math.atan2(dy, dx);
-    const headLength = 15;
-    const headAngle = Math.PI / 6;
-
-    // Preferred label position (midpoint + offset)
-    const preferredX = (x1 + x2) / 2 + labelOffset.x;
-    const preferredY = (y1 + y2) / 2 + labelOffset.y;
-
-    // Adjust to avoid collisions & register
-    const adjusted = registerLabelPosition(preferredX, preferredY, label, fontSize);
+  // Helper: Draw Arrow
+  const drawArrow = (x1: number, y1: number, x2: number, y2: number, color: string, label: string | React.ReactNode, labelOffset: { x: number, y: number } = { x: 0, y: 0 }, fontSize: number = 14) => {
+    // Determine marker ID based on color
+    let markerId = "arrowhead"; // Default black
+    if (color === '#d00000') markerId = "redArrowhead";
+    if (color === '#FF6E6C') markerId = "pinkArrowhead"; // Tension/Mass
+    if (color === '#9C27B0') markerId = "purpleArrowhead"; // Push
+    if (color === '#FFDE00') markerId = "yellowArrowhead"; // Friction
 
     return (
-      <g key={label}>
-        <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth="4" />
-        <polygon
-          points={`${x2},${y2} ${x2 - headLength * Math.cos(arrowAngle - headAngle)},${y2 - headLength * Math.sin(arrowAngle - headAngle)} ${x2 - headLength * Math.cos(arrowAngle + headAngle)},${y2 - headLength * Math.sin(arrowAngle + headAngle)}`}
-          fill={color}
-        />
-        {/* Text background for readability */}
-        <rect
-          x={adjusted.x - adjusted.w / 2}
-          y={adjusted.y - adjusted.h / 2}
-          width={adjusted.w}
-          height={adjusted.h}
-          rx={6}
-          ry={6}
-          fill="rgba(255,255,255,0.85)"
+      <g className="force-arrow">
+        <line
+          x1={x1} y1={y1} x2={x2} y2={y2}
           stroke={color}
-          strokeWidth={1.2}
+          strokeWidth="2.5"
+          markerEnd={`url(#${markerId})`}
         />
+        {/* Helper line to label if needed? No, just place label */}
         <text
-          x={adjusted.x}
-          y={adjusted.y}
+          x={x2 + labelOffset.x}
+          y={y2 + labelOffset.y}
           fill={color}
           fontSize={fontSize}
-          fontWeight="700"
+          fontWeight="bold"
           textAnchor="middle"
-          dominantBaseline="middle"
-          style={{ pointerEvents: 'none' }}
         >
           {label}
         </text>
@@ -143,33 +122,67 @@ const Visualization = ({ simulation }: VisualizationProps) => {
 
   return (
     <div className="p-4 md:p-6 bg-white border-b border-gray-200">
-      <h2 className="text-xl md:text-2xl font-bold mb-4 text-gray-800 flex items-center gap-2">
-        <span className="text-2xl">📊</span>
-        Free Body Diagram
-      </h2>
-      <div className="bg-gray-50 rounded-lg border-2 border-gray-300 p-4 flex items-center justify-center overflow-auto">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">
+          <span className="text-2xl">📊</span>
+          Free Body Diagram
+        </h2>
+
+        {/* Zoom Control */}
+        <div className="flex items-center gap-2 bg-gray-100 p-2 rounded-lg">
+          <span className="text-sm font-bold text-gray-500">Zoom</span>
+          <button
+            onClick={() => setZoom(Math.max(0.6, zoom - 0.1))}
+            className="w-8 h-8 flex items-center justify-center bg-white border border-gray-300 rounded hover:bg-gray-50 font-bold"
+          >
+            -
+          </button>
+          <span className="w-12 text-center text-sm font-mono">{Math.round(zoom * 100)}%</span>
+          <button
+            onClick={() => setZoom(Math.min(2.0, zoom + 0.1))}
+            className="w-8 h-8 flex items-center justify-center bg-white border border-gray-300 rounded hover:bg-gray-50 font-bold"
+          >
+            +
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-gray-50 rounded-lg border-2 border-gray-300 p-4 flex items-center justify-center overflow-auto relative">
         <svg
           width={width}
           height={height}
-          viewBox={`0 0 ${width} ${height}`}
+          viewBox={`${viewBoxX} ${viewBoxY} ${viewBoxWidth} ${viewBoxHeight}`}
           className="max-w-full h-auto"
           style={{ minHeight: '450px' }}
         >
-          {/* Coordinate System Legend - Top Left */}
-          <g transform="translate(60, 60)">
-            {/* Background box */}
-            <rect x="-40" y="-40" width="80" height="80" rx="8" fill="rgba(255,255,255,0.9)" stroke="#ccc" strokeWidth="1" />
-            <text x="0" y="-25" textAnchor="middle" fontSize="10" fill="#666" fontWeight="bold">AXES</text>
+          {/* Local / Incline Axis Legend (Top Left) */}
+          <g transform={`translate(${viewBoxX + 70}, ${viewBoxY + 70})`}>
+            {/* Expanded box for better visibility */}
+            <rect x="-50" y="-55" width="100" height="110" rx="10" fill="rgba(255,255,255,0.95)" stroke="#ccc" strokeWidth="1" />
 
-            <g transform={`rotate(${-angle})`}>
-              {/* Note: SVG Y is down. Standard physics Y is up. To match visual "y' perpendicular", we point it "up" relative to incline */}
-              {/* y' axis */}
-              <line x1="0" y1="20" x2="0" y2="-20" stroke="#333" strokeWidth="2" markerEnd="url(#arrowhead)" />
-              <text x="0" y="-28" textAnchor="middle" fontSize="12" fontWeight="bold" fill="#333">y'</text>
+            {/* Title moved up */}
+            <text x="0" y="-35" textAnchor="middle" fontSize="11" fill="#666" fontWeight="bold" style={{ letterSpacing: '1px' }}>LOCAL</text>
 
-              {/* x' axis */}
-              <line x1="-20" y1="0" x2="20" y2="0" stroke="#333" strokeWidth="2" markerEnd="url(#arrowhead)" />
-              <text x="28" y="4" textAnchor="middle" fontSize="12" fontWeight="bold" fill="#333">x'</text>
+            {/* Axis moved down slightly */}
+            <g transform={`translate(0, 10) rotate(${-angle})`}>
+              <line x1="0" y1="25" x2="0" y2="-25" stroke="#333" strokeWidth="2" markerEnd="url(#arrowhead)" />
+              <text x="0" y="-32" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#333">y'</text>
+              <line x1="-25" y1="0" x2="25" y2="0" stroke="#333" strokeWidth="2" markerEnd="url(#arrowhead)" />
+              <text x="35" y="4" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#333">x'</text>
+            </g>
+          </g>
+
+          {/* Global Axis Legend */}
+          <g transform={`translate(${viewBoxX + viewBoxWidth - 70}, ${viewBoxY + 70})`}>
+            <rect x="-50" y="-55" width="100" height="110" rx="10" fill="rgba(255,255,255,0.95)" stroke="#ccc" strokeWidth="1" />
+
+            <text x="0" y="-35" textAnchor="middle" fontSize="11" fill="#666" fontWeight="bold" style={{ letterSpacing: '1px' }}>GLOBAL</text>
+
+            <g transform={`translate(0, 10)`}>
+              <line x1="0" y1="25" x2="0" y2="-25" stroke="#333" strokeWidth="2" markerEnd="url(#arrowhead)" />
+              <text x="0" y="-32" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#333">Y</text>
+              <line x1="-25" y1="0" x2="25" y2="0" stroke="#333" strokeWidth="2" markerEnd="url(#arrowhead)" />
+              <text x="35" y="4" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#333">X</text>
             </g>
           </g>
 
@@ -178,16 +191,18 @@ const Visualization = ({ simulation }: VisualizationProps) => {
             <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
               <polygon points="0 0, 10 3.5, 0 7" fill="#333" />
             </marker>
-            <marker id="pinkArrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-              <polygon points="0 0, 10 3.5, 0 7" fill="#E91E63" />
+            <marker id="redArrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#d00000" />
             </marker>
-            <pattern id="smallGrid" width="20" height="20" patternUnits="userSpaceOnUse">
-              <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e0e0e0" strokeWidth="1" />
-            </pattern>
-            <pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse">
-              <rect width="100" height="100" fill="url(#smallGrid)" />
-              <path d="M 100 0 L 0 0 0 100" fill="none" stroke="#d0d0d0" strokeWidth="1.5" />
-            </pattern>
+            <marker id="pinkArrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#FF6E6C" />
+            </marker>
+            <marker id="purpleArrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#9C27B0" />
+            </marker>
+            <marker id="yellowArrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#FFDE00" />
+            </marker>
           </defs>
 
           {/* Ground */}
@@ -226,7 +241,7 @@ const Visualization = ({ simulation }: VisualizationProps) => {
                 fontSize="18"
                 fontWeight="bold"
               >
-                θ = {angle}°
+                θ
               </text>
             </>
           )}
@@ -243,140 +258,88 @@ const Visualization = ({ simulation }: VisualizationProps) => {
             transform={`rotate(${angle} ${blockX} ${blockY})`}
           />
 
-          {/* Impending Motion Arrow - Pink Triangle indicating direction */}
-          {motionDirection !== 'none' && (
-            <g transform={`rotate(${angle} ${blockX} ${blockY})`}>
-              {(() => {
-                const isUp = motionDirection === 'up';
-                // Position arrow above the block (negative y local)
-                const arrowY = -45;
-                const arrowX = isUp ? 55 : -55;
-
-                return (
-                  <g transform={`translate(${blockX + arrowX}, ${blockY + arrowY})`}>
-                    <polygon
-                      points={isUp
-                        ? "0,0 12,7 0,14"   // Points Right (Up Slope)
-                        : "12,0 0,7 12,14"  // Points Left (Down Slope)
-                      }
-                      fill="#E91E63"
-                    />
-                  </g>
-                );
-              })()}
-            </g>
-          )}
-
           {/* Forces */}
           {showMass && (
             <>
-              {/* Weight (straight down - always vertical) - originates from center */}
-              {drawArrow(
+              {/* Only show main vertical Mg if angle is 0 */}
+              {angle === 0 && drawArrow(
                 blockX,
                 blockY,
                 blockX,
                 blockY + weight * forceScale,
-                '#007AFF',
-                `Mg=${weight.toFixed(1)}N`,
-                { x: 40, y: 0 },
+                '#d00000',
+                'Mg',
+                { x: 20, y: 0 },
                 18
               )}
 
-              {/* Normal Force (perpendicular to surface - pointing AWAY from surface) */}
+              {/* Normal Force - Perpendicular to surface */}
               {(() => {
-                const normalOrigin = getForceOrigin('center');
+                const normalOrigin = getForceOrigin('center'); // Center is usually best for FBD
+                // Vector: (-sin, -cos) * Mag
+                const endX = normalOrigin.x - normalForce * forceScale * Math.sin(angleRad);
+                const endY = normalOrigin.y - normalForce * forceScale * Math.cos(angleRad);
+
                 return drawArrow(
                   normalOrigin.x,
                   normalOrigin.y,
-                  normalOrigin.x - normalForce * forceScale * Math.sin(angleRad),
-                  normalOrigin.y - normalForce * forceScale * Math.cos(angleRad),
-                  '#21AD93',
-                  `R_N=${normalForce.toFixed(1)}N`,
-                  { x: -50, y: -35 }, // Increased offset to avoid block overlap
+                  endX,
+                  endY,
+                  '#d00000',
+                  <tspan>R<tspan dy="5" fontSize="12">N</tspan></tspan>,
+                  { x: -20, y: -20 },
                   18
                 );
               })()}
 
-              {/* Weight components (if inclined) - Only show labels, not the dashed lines */}
+              {/* Angle > 0: Show Components */}
               {angle > 0 && (
                 <>
-                  {/* Parallel component label (Mg sin) */}
+                  {/* Parallel Component (Mg sin) - Down Slope */}
                   {(() => {
-                    const label = `Mg·sin(${angle}°)`;
-                    // Position relative to "down slope" from block
-                    // Vector direction: (cos, -sin). Position it some distance along this vector + offset
-                    const distAlongSlope = 80;
-                    const perpOffset = 25; // Below the slope line
+                    const compMag = weight * Math.sin(angleRad);
+                    // Down Slope vector: (-cos, sin)
+                    const vecX = -Math.cos(angleRad);
+                    const vecY = Math.sin(angleRad);
 
-                    const labelX = blockX + distAlongSlope * Math.cos(angleRad) + perpOffset * Math.sin(angleRad);
-                    const labelY = blockY - distAlongSlope * Math.sin(angleRad) + perpOffset * Math.cos(angleRad);
+                    const startX = blockX;
+                    const startY = blockY;
+                    const endX = startX + vecX * compMag * forceScale;
+                    const endY = startY + vecY * compMag * forceScale;
 
-                    const pos = registerLabelPosition(labelX, labelY, label, 14);
-                    return (
-                      <g key="mg-sin">
-                        <rect
-                          x={pos.x - pos.w / 2}
-                          y={pos.y - pos.h / 2}
-                          width={pos.w}
-                          height={pos.h}
-                          rx={6}
-                          ry={6}
-                          fill="rgba(255,255,255,0.85)"
-                          stroke="#0056b3"
-                          strokeWidth={1}
-                        />
-                        <text
-                          x={pos.x}
-                          y={pos.y}
-                          fill="#0056b3"
-                          fontSize={14}
-                          fontWeight="700"
-                          textAnchor="middle"
-                          dominantBaseline="middle"
-                        >
-                          {label}
-                        </text>
-                      </g>
+                    return drawArrow(
+                      startX,
+                      startY,
+                      endX,
+                      endY,
+                      '#d00000',
+                      'Mg sinθ',
+                      { x: -10, y: 25 },
+                      14
                     );
                   })()}
 
-                  {/* Perpendicular component label (Mg cos) */}
+                  {/* Perpendicular Component (Mg cos) - Into Slope */}
                   {(() => {
-                    const label = `Mg·cos(${angle}°)`;
-                    // Position relative to "into slope" from block
-                    // Vector direction: (-sin, -cos). 
-                    const distIntoSlope = 75;
-                    const parallelOffset = -20; // Slightly left/up slope
+                    const compMag = weight * Math.cos(angleRad);
+                    // Into Slope vector: (sin, cos)
+                    const vecX = Math.sin(angleRad);
+                    const vecY = Math.cos(angleRad);
 
-                    const labelX = blockX - distIntoSlope * Math.sin(angleRad) + parallelOffset * Math.cos(angleRad);
-                    const labelY = blockY + distIntoSlope * Math.cos(angleRad) - parallelOffset * Math.sin(angleRad);
+                    const startX = blockX;
+                    const startY = blockY;
+                    const endX = startX + vecX * compMag * forceScale;
+                    const endY = startY + vecY * compMag * forceScale;
 
-                    const pos = registerLabelPosition(labelX, labelY, label, 14);
-                    return (
-                      <g key="mg-cos">
-                        <rect
-                          x={pos.x - pos.w / 2}
-                          y={pos.y - pos.h / 2}
-                          width={pos.w}
-                          height={pos.h}
-                          rx={6}
-                          ry={6}
-                          fill="rgba(255,255,255,0.85)"
-                          stroke="#0056b3"
-                          strokeWidth={1}
-                        />
-                        <text
-                          x={pos.x}
-                          y={pos.y}
-                          fill="#0056b3"
-                          fontSize={14}
-                          fontWeight="700"
-                          textAnchor="middle"
-                          dominantBaseline="middle"
-                        >
-                          {label}
-                        </text>
-                      </g>
+                    return drawArrow(
+                      startX,
+                      startY,
+                      endX,
+                      endY,
+                      '#d00000',
+                      'Mg cosθ',
+                      { x: 30, y: 15 },
+                      14
                     );
                   })()}
                 </>
@@ -384,83 +347,120 @@ const Visualization = ({ simulation }: VisualizationProps) => {
             </>
           )}
 
-          {/* Tension (up the slope) - originates from right side of block */}
+          {/* Tension */}
           {showTension && tension > 0 && (() => {
             const tensionOrigin = getForceOrigin('right');
+            // Up Slope: (cos, -sin)
+            const endX = tensionOrigin.x + tension * forceScale * Math.cos(angleRad);
+            const endY = tensionOrigin.y - tension * forceScale * Math.sin(angleRad);
+
             return drawArrow(
               tensionOrigin.x,
               tensionOrigin.y,
-              tensionOrigin.x + tension * forceScale * Math.cos(angleRad),
-              tensionOrigin.y - tension * forceScale * Math.sin(angleRad),
+              endX,
+              endY,
               '#FF6E6C',
-              `T=${tension}N`,
-              { x: 0, y: -25 },
+              <tspan>F<tspan dy="5" fontSize="10">1</tspan></tspan>,
+              { x: 0, y: -20 },
               16
             );
           })()}
 
-          {/* Push (horizontal - parallel to ground) - originates from left side */}
-          {showPush && push > 0 && (() => {
-            const pushOrigin = { x: blockX - 45, y: blockY };
+          {/* Pulley System (Ch 6.1) */}
+          {simulation.scenario === 'pulley' && (() => {
+            const pulleyRadius = 20;
+            const pulleyX = inclineEndX;
+            const pulleyY = inclineEndY - pulleyRadius / 2;
+            const blockRightX = blockX + (blockSize / 2) * Math.cos(angleRad);
+            const blockRightY = blockY - (blockSize / 2) * Math.sin(angleRad);
+            const stringDropLength = 80;
+            const hangingMassX = pulleyX + pulleyRadius;
+            const hangingMassY = pulleyY + stringDropLength;
+            const hangingMassSize = 30;
+
+            return (
+              <g>
+                <line x1={blockRightX} y1={blockRightY} x2={pulleyX} y2={pulleyY} stroke="#333" strokeWidth="2" />
+                <circle cx={pulleyX} cy={pulleyY} r={pulleyRadius} fill="#888" stroke="#333" strokeWidth="2" />
+                <line x1={pulleyX + pulleyRadius} y1={pulleyY} x2={hangingMassX} y2={hangingMassY} stroke="#333" strokeWidth="2" />
+                <rect
+                  x={hangingMassX - hangingMassSize / 2}
+                  y={hangingMassY}
+                  width={hangingMassSize}
+                  height={hangingMassSize}
+                  fill="#FF6E6C"
+                  stroke="#333"
+                  strokeWidth="2"
+                />
+                <text x={hangingMassX + 25} y={hangingMassY + 15} fontSize="14" fill="#666" fontWeight="bold">m<tspan dy="5" fontSize="10">a</tspan></text>
+              </g>
+            );
+          })()}
+
+          {/* Push (Ch 5.3) */}
+          {(showPush || simulation.scenario === 'external_force') && push > 0 && (() => {
+            // @ts-ignore
+            const pAngle = (forces as any).pushAngleRad || 0;
+            const totalAngle = angleRad + pAngle;
+            const startX = blockX;
+            const startY = blockY;
+            const vecLen = push * forceScale;
+            const endX = startX + vecLen * Math.cos(totalAngle);
+            const endY = startY - vecLen * Math.sin(totalAngle);
+
             return drawArrow(
-              pushOrigin.x,
-              pushOrigin.y,
-              pushOrigin.x + push * forceScale,
-              pushOrigin.y,
-              '#00CED1',
-              `P=${push}N`,
-              { x: 0, y: -22 },
+              startX,
+              startY,
+              endX,
+              endY,
+              '#9C27B0',
+              <tspan>F<tspan dy="5" fontSize="10">2</tspan></tspan>,
+              { x: 0, y: -20 },
               16
             );
           })()}
 
-          {/* Friction - opposes motion */}
+          {/* Friction */}
           {motionDirection !== 'none' && friction > 0 && (() => {
-            // Friction origin depends on motion direction to avoid overlap
-            // If up-slope, friction is LEFT (down slope).
-            // If down-slope, friction is RIGHT (up slope).
             const isUpMotion = motionDirection === 'up';
+            // Friction opposes motion. Up Motion -> Friction Down Slope (-cos, sin)
+            // Down Motion -> Friction Up Slope (cos, -sin)
 
-            // Push friction slightly away from center to avoid collision with block
-            const frictionOffset = 18;
-            const frictionOrigin = isUpMotion
-              ? { x: blockX - frictionOffset * Math.cos(angleRad), y: blockY + frictionOffset * Math.sin(angleRad) } // Left side
-              : { x: blockX + frictionOffset * Math.cos(angleRad), y: blockY - frictionOffset * Math.sin(angleRad) }; // Right side
+            // Offset to avoid overlap
+            const offset = 22;
+            // If Up Motion (Friction Down), put on bottom/left side?
+            // Actually, usually drawn at contact surface.
+
+            // Base at center of bottom face?
+            const bottomX = blockX - (blockSize / 2 + 2) * -Math.sin(angleRad); // Normal Vector (-sin, -cos) is UP. Bottom is DOWN (+sin, +cos)
+            const bottomY = blockY - (blockSize / 2 + 2) * -Math.cos(angleRad);
+
+            // Let's stick to center-ish but offset perpendicular
+            // Center + Offset * (-Normal) = Center + Offset * (sin, cos)
+            const frictionOriginX = blockX + offset * Math.sin(angleRad);
+            const frictionOriginY = blockY + offset * Math.cos(angleRad);
+
+            const dirSign = isUpMotion ? -1 : 1; // -1 for Down Slope, 1 for Up Slope
+            const vecX = dirSign * Math.cos(angleRad);
+            const vecY = dirSign * -Math.sin(angleRad);
+
+            const startX = frictionOriginX;
+            const startY = frictionOriginY;
+            const endX = startX + vecX * friction * forceScale;
+            const endY = startY + vecY * friction * forceScale;
 
             return drawArrow(
-              frictionOrigin.x,
-              frictionOrigin.y,
-              // If motion is UP slope, friction points DOWN slope (-1)
-              // If motion is DOWN slope, friction points UP slope (+1) -- wait, logic check
-              // Standard: dx = length * cos(angle). 
-              // Down slope direction (increasing x on screen sort of): +cos, +sin??
-              // Let's rely on standard vector logic: 
-              // Up slope vector: (-cos(angle), +sin(angle)) -- wait, up slope is Left/Up on screen? NO.
-              // Incline goes up to the right? 
-              // Previous code:
-              // x2 = inclineEndX = centerX + length * cos(angle). y2 = centerY - length * sin(angle).
-              // So Left is Start, Right is End (Higher).
-              // Up Slope = Moving Right/Up. Vector (cos, -sin).
-              // Down Slope = Moving Left/Down. Vector (-cos, +sin).
-
-              // Friction opposes motion.
-              // If Motion UP (Right/Up), Friction is DOWN (Left/Down) -> (-cos, +sin)
-              // If Motion DOWN (Left/Down), Friction is UP (Right/Up) -> (+cos, -sin)
-
-              // My code for arrow end: origin + direction * length.
-
-              frictionOrigin.x + (isUpMotion ? -1 : 1) * friction * forceScale * Math.cos(angleRad),
-              frictionOrigin.y - (isUpMotion ? -1 : 1) * friction * forceScale * Math.sin(angleRad),
-              // Note: for y, up is negative. So "Up Slope" (-sin) is correct for y component subtraction.
-              // Wait, earlier code was: (motionDirection === 'down' ? 1 : -1)
-              // If motion 'down', we use 1 (Up slope). Correct.
-
+              startX,
+              startY,
+              endX,
+              endY,
               '#FFDE00',
-              `F_f=${friction.toFixed(1)}N`,
-              { x: 0, y: isUpMotion ? 28 : -28 }, // Offset labels to avoid colliding with Tension/Mg components
+              <tspan>F<tspan dy="5" fontSize="12">f</tspan></tspan>,
+              { x: 0, y: 25 }, // Below axis
               16
             );
           })()}
+
         </svg>
       </div>
     </div>

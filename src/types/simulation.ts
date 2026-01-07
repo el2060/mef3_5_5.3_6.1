@@ -9,6 +9,11 @@ export interface SimulationState {
   showPush: boolean;
   motionDirection: 'none' | 'up' | 'down';
   showEquations: boolean;
+  // New Scenario Fields
+  scenario: 'basic' | 'external_force' | 'pulley';
+  externalForceMagnitude: number; // For Ch 5.3
+  externalForceAngle: number;     // For Ch 5.3 (degrees relative to horizontal)
+  pulleyMass: number;             // For Ch 6.1 (Mass A)
 }
 
 export interface GuidedLearningState {
@@ -27,6 +32,10 @@ export const initialSimulationState: SimulationState = {
   showPush: false,
   motionDirection: 'none',
   showEquations: false,
+  scenario: 'basic',
+  externalForceMagnitude: 20,
+  externalForceAngle: 30,
+  pulleyMass: 5,
 };
 
 export const initialGuidedLearningState: GuidedLearningState = {

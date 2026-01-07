@@ -20,14 +20,14 @@ const Instructions = () => {
       {isExpanded && (
         <div className="mt-3 space-y-3">
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="bg-blue-50/80 rounded-lg p-3 border border-blue-100">
-              <p className="font-bold text-blue-800 text-sm mb-1">1️⃣ Guided Mode</p>
-              <p className="text-xs text-blue-900/80">Follow steps above. Answer questions to learn.</p>
+          <div className="flex gap-4">
+            <div className="flex-1 bg-blue-50/80 rounded-lg p-4 border-2 border-blue-100">
+              <p className="font-bold text-blue-800 text-base mb-1">1️⃣ Guided Mode</p>
+              <p className="text-sm text-blue-900/80 font-medium">Follow steps to learn.</p>
             </div>
-            <div className="bg-green-50/80 rounded-lg p-3 border border-green-100">
-              <p className="font-bold text-green-800 text-sm mb-1">2️⃣ Free Play</p>
-              <p className="text-xs text-green-900/80">Use controls on the right to experiment.</p>
+            <div className="flex-1 bg-green-50/80 rounded-lg p-4 border-2 border-green-100">
+              <p className="font-bold text-green-800 text-base mb-1">2️⃣ Free Play</p>
+              <p className="text-sm text-green-900/80 font-medium">Experiment with controls.</p>
             </div>
           </div>
 

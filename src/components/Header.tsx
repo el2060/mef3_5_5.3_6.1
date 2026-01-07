@@ -5,17 +5,18 @@ interface HeaderProps {
 const Header = ({ onShowInfo }: HeaderProps) => {
   return (
     <div className="p-4 md:p-6 bg-gradient-to-r from-blue-600 to-indigo-700 text-white flex flex-col gap-2">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold">MEF Learning Simulation</h1>
-          <p className="mt-1 text-base md:text-lg opacity-90">
+          <h1 className="text-3xl md:text-4xl font-black mb-2 text-white tracking-tight">
+            MEF Learning Simulation
+          </h1>
+          <p className="text-lg text-blue-100 font-medium">
             Chapters 5, 5.3 & 6.1: Free Body Diagrams, Friction & Equilibrium
           </p>
         </div>
         <button
           onClick={onShowInfo}
-          className="self-start md:self-center bg-white/15 hover:bg-white/25 text-white font-semibold px-5 py-2 rounded-xl text-sm md:text-base shadow-sm backdrop-blur-sm transition-colors flex items-center gap-2"
-          aria-label="Show application information"
+          className="bg-white/10 hover:bg-white/20 text-white px-5 py-2.5 rounded-lg text-base font-bold transition-all flex items-center gap-2 backdrop-blur-sm shadow-sm"
         >
           ℹ️ App Info
         </button>
