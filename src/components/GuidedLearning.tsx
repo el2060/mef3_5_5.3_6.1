@@ -1,3 +1,5 @@
+
+import { useState, useEffect } from 'react';
 import { SimulationState } from '../types/simulation';
 
 interface GuidedLearningProps {
@@ -16,94 +18,102 @@ const GuidedLearning = ({
   answeredQuestions,
   onNextStep,
   onReset,
-  onShowFeedback,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onShowFeedback, // Keeping for compatibility but not using for questions
   onMarkAnswered,
   simulation,
   onUpdateSimulation,
 }: GuidedLearningProps) => {
-  
+
+  const [feedback, setFeedback] = useState<{ [key: string]: { type: 'success' | 'error', text: string } }>({});
+
+  // Clear feedback when step changes
+  useEffect(() => {
+    setFeedback({});
+  }, [currentStep]);
+
   const checkAnswer = (questionId: string, answer: string, correctAnswer: string, correctFeedback: string, incorrectFeedback: string) => {
     if (answer === correctAnswer) {
-      onShowFeedback(correctFeedback);
+      setFeedback(prev => ({ ...prev, [questionId]: { type: 'success', text: correctFeedback } }));
       onMarkAnswered(questionId);
     } else {
-      onShowFeedback(incorrectFeedback);
+      setFeedback(prev => ({ ...prev, [questionId]: { type: 'error', text: incorrectFeedback } }));
     }
   };
 
-  return (
-    <div className="p-4 md:p-5 bg-white">
-      <h2 className="text-2xl md:text-3xl font-bold mb-3 text-gray-800 flex items-center gap-2">
-        <span className="text-3xl">📖</span>
-        Guided Learning
-      </h2>
-      
-      {/* Info Banner */}
-      <div className="mb-4 bg-gradient-to-r from-blue-100 to-indigo-100 border border-blue-300 rounded-lg p-3">
-        <p className="text-sm md:text-base text-gray-800">
-          <strong className="text-blue-700">💡 Tip:</strong> Follow these steps to learn, 
-          <strong className="text-green-700"> OR</strong> skip ahead and experiment freely with the Controls panel! →
-        </p>
+  const FeedbackMsg = ({ qId }: { qId: string }) => {
+    const msg = feedback[qId];
+    if (!msg) return null;
+    return (
+      <div className={`mt-2 p-2 text-sm rounded ${msg.type === 'success' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'}`}>
+        <strong>{msg.type === 'success' ? '✓ ' : '✗ '}</strong>
+        {msg.text}
       </div>
-      
-      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-lg border border-blue-100">
-        
+    );
+  };
+
+  const StepHeader = ({ title }: { title: string }) => (
+    <div className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm font-bold inline-block mb-2">
+      {title}
+    </div>
+  );
+
+  return (
+    <div className="p-4 bg-white">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+          <span>📖</span> Guided Learning
+        </h2>
+        <button onClick={onReset} className="text-xs text-gray-500 underline hover:text-red-500">Reset All</button>
+      </div>
+
+      <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+
         {/* Step 1 */}
         {currentStep === 1 && (
           <div>
-            <div className="bg-blue-600 text-white px-4 py-2 rounded-md inline-block mb-3 text-base font-bold">
-              STEP 1: FLAT SURFACE BASICS
-            </div>
-            <p className="mt-3 leading-relaxed text-base md:text-lg text-gray-700">
-              Let's start simple. A block resting on a <strong className="text-blue-600">flat (horizontal) surface</strong> where the angle θ = 0°.
+            <StepHeader title="STEP 1: FLAT SURFACE" />
+            <p className="text-sm text-gray-700 mb-2">
+              Start with a flat surface (Angle 0°).
             </p>
+            <ul className="list-disc list-inside text-sm text-gray-700 space-y-1 mb-3">
+              <li>Set <strong>Angle</strong> to <strong>0°</strong></li>
+              <li>Check <strong>"Mass (Mg) & R_N"</strong></li>
+            </ul>
+
             {simulation.angle !== 0 && (
-              <div className="mt-2 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-md px-3 py-2 text-sm font-semibold">
-                Current angle is {simulation.angle}°. Set it to 0° in Controls → Angle slider.
+              <div className="mb-2 text-xs bg-yellow-100 text-yellow-800 p-2 rounded">
+                ⚠️ Set angle to 0° to continue.
               </div>
             )}
-            <ol className="list-decimal list-inside mt-3 space-y-2 leading-relaxed text-base md:text-lg text-gray-700">
-              <li>Set <strong className="text-blue-600">Angle</strong> to <strong>0°</strong>.</li>
-              <li>Check <strong className="text-green-600">"Mass (Mg) & R_N"</strong>.</li>
-              <li>Optionally toggle <strong className="text-blue-600">"Show Equations"</strong>.</li>
-            </ol>
-            <div className="mt-4 p-4 bg-white rounded-md border-l-4 border-blue-500">
-              <p className="font-semibold text-base text-gray-800 mb-2">Key Concepts:</p>
-              <ul className="list-disc list-inside leading-relaxed text-base text-gray-700 space-y-1.5">
-                <li><strong className="text-blue-600">Weight (Mg)</strong> acts <em>vertically downward</em> regardless of surface.</li>
-                <li><strong className="text-green-600">Normal Force (R_N)</strong> acts <em>perpendicular</em> to the surface (so vertical up when flat).</li>
-                <li>When flat (θ = 0°) the axes align with forces → no need to resolve Mg into components.</li>
-                <li>Equilibrium in y: <strong>ΣF<sub>y</sub> = R_N − Mg = 0</strong></li>
-              </ul>
+
+            <div className="mt-3 p-3 bg-white rounded border border-gray-200">
+              <p className="text-sm font-semibold text-gray-800 mb-2">Q: Direction of Normal Force (R_N) on flat surface?</p>
+
+              {!answeredQuestions.has('step1-q1') ? (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setFeedback({ ...feedback, 'step1-q1': { type: 'success', text: "Correct! R_N is vertical (perpendicular to surface)." } }) || onMarkAnswered('step1-q1')}
+                    className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 rounded text-sm font-medium transition-colors"
+                  >
+                    Vertically Up
+                  </button>
+                  <button
+                    onClick={() => setFeedback({ ...feedback, 'step1-q1': { type: 'error', text: "Incorrect. Normal means perpendicular." } })}
+                    className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 rounded text-sm font-medium transition-colors"
+                  >
+                    Horizontal
+                  </button>
+                </div>
+              ) : (
+                <div className="text-sm text-green-700 font-medium">✓ Correct! R_N is perpendicular.</div>
+              )}
+              <FeedbackMsg qId="step1-q1" />
             </div>
-            <div className="mt-4 p-3 bg-white rounded-md border-l-4 border-blue-500">
-              <p className="font-semibold text-base text-gray-800 mb-2">Question:</p>
-              <p className="text-base text-gray-700">On a flat surface, what is the direction of the Normal Reaction Force R_N?</p>
-            </div>
-            {!answeredQuestions.has('step1-q1') ? (
-              <div className="flex flex-col sm:flex-row gap-2 mt-3">
-                <button
-                  onClick={() => {
-                    onShowFeedback("Correct! On a flat surface, R_N points vertically upward, perpendicular to the surface.");
-                    onMarkAnswered('step1-q1');
-                  }}
-                  className="flex-1 bg-white border-2 border-gray-300 rounded-lg px-5 py-3 font-bold text-base uppercase hover:bg-gray-100 transition-all duration-200"
-                >
-                  Vertically Upward
-                </button>
-                <button
-                  onClick={() => onShowFeedback("Not quite. 'Parallel to surface' would mean horizontal. Normal means perpendicular. Try again.")}
-                  className="flex-1 bg-white border-2 border-gray-300 rounded-lg px-5 py-3 font-bold text-base uppercase hover:bg-gray-100 transition-all duration-200"
-                >
-                  Parallel to Surface
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => onNextStep(2)}
-                className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg px-6 py-3 uppercase text-base shadow transition-all duration-200"
-              >
-                Got it! Next →
+
+            {answeredQuestions.has('step1-q1') && (
+              <button onClick={() => onNextStep(2)} className="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-bold text-sm">
+                Next →
               </button>
             )}
           </div>
@@ -112,57 +122,48 @@ const GuidedLearning = ({
         {/* Step 2 */}
         {currentStep === 2 && (
           <div>
-            <div className="bg-blue-600 text-white px-4 py-2 rounded-md inline-block mb-3 text-base font-bold">
-              STEP 2: FLAT SURFACE (FRICTION)
-            </div>
-            <p className="mt-3 leading-relaxed text-base md:text-lg text-gray-700">
-              Now, let's try to move the block.
+            <StepHeader title="STEP 2: FRICTION BASICS" />
+            <p className="text-sm text-gray-700 mb-2">
+              Let's add tension and try to move the block right.
             </p>
-            <ol className="list-decimal list-inside mt-3 space-y-2 leading-relaxed text-base md:text-lg text-gray-700">
-              <li>Keep angle at <strong>0°</strong>.</li>
-              <li>Add <strong className="text-red-600">"Tension (T)"</strong>.</li>
-              <li>Select <strong className="text-yellow-600">"Impending Motion Up-Slope"</strong> (i.e., "to the right").</li>
-            </ol>
-            <div className="mt-4 p-4 bg-white rounded-md border-l-4 border-blue-500">
-              <p className="font-semibold text-base text-gray-800 mb-2">Question:</p>
-              <p className="text-base text-gray-700">The block is *about* to move right. What is the direction of the friction force (F_f)?</p>
+            <ul className="list-disc list-inside text-sm text-gray-700 space-y-1 mb-3">
+              <li>Add <strong>"Tension (T)"</strong></li>
+              <li>Select <strong>"Motion Up-Slope"</strong> (Right)</li>
+            </ul>
+
+            <div className="mt-3 p-3 bg-white rounded border border-gray-200">
+              <p className="text-sm font-semibold text-gray-800 mb-2">Q: Block moves right. Which way does Friction point?</p>
+
+              {!answeredQuestions.has('step2') ? (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => checkAnswer('step2', 'left', 'left', "Correct! Friction opposes motion.", "Incorrect. Friction opposes motion.")}
+                    className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 rounded text-sm font-medium transition-colors"
+                  >
+                    Left (Opposite)
+                  </button>
+                  <button
+                    onClick={() => checkAnswer('step2', 'right', 'left', "", "Incorrect. Friction opposes motion.")}
+                    className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 rounded text-sm font-medium transition-colors"
+                  >
+                    Right (Same)
+                  </button>
+                </div>
+              ) : (
+                <div className="text-sm text-green-700 font-medium">✓ Correct! Friction opposes motion.</div>
+              )}
+              <FeedbackMsg qId="step2" />
             </div>
-            {!answeredQuestions.has('step2') ? (
-              <div className="flex flex-col sm:flex-row gap-2 mt-3">
-                <button
-                  onClick={() => checkAnswer(
-                    'step2',
-                    'left',
-                    'left',
-                    "Correct! Friction always opposes the impending motion. The block wants to move right, so friction pulls left.",
-                    "Not quite. Friction *opposes* motion. Try again."
-                  )}
-                  className="flex-1 bg-white border-2 border-gray-300 rounded-lg px-5 py-3 font-bold text-base uppercase hover:bg-gray-100 transition-all duration-200"
-                >
-                  Opposite (Left)
-                </button>
-                <button
-                  onClick={() => checkAnswer(
-                    'step2',
-                    'right',
-                    'left',
-                    "Correct! Friction always opposes the impending motion.",
-                    "Not quite. Friction *opposes* motion. Try again."
-                  )}
-                  className="flex-1 bg-white border-2 border-gray-300 rounded-lg px-5 py-3 font-bold text-base uppercase hover:bg-gray-100 transition-all duration-200"
-                >
-                  Same (Right)
-                </button>
-              </div>
-            ) : (
+
+            {answeredQuestions.has('step2') && (
               <button
                 onClick={() => {
                   onUpdateSimulation({ showTension: true, motionDirection: 'up' });
                   onNextStep(3);
                 }}
-                className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg px-6 py-3 uppercase text-base shadow transition-all duration-200"
+                className="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-bold text-sm"
               >
-                Next Step: Inclined Planes →
+                Next: Inclines →
               </button>
             )}
           </div>
@@ -171,146 +172,106 @@ const GuidedLearning = ({
         {/* Step 3 */}
         {currentStep === 3 && (
           <div>
-            <div className="bg-blue-600 text-white px-4 py-2 rounded-md inline-block mb-3 text-base font-bold">
-              STEP 3: INCLINED PLANE
-            </div>
-            <p className="mt-2 leading-relaxed text-sm md:text-base text-gray-700">
-              This is the most important part. <strong className="text-red-600">Uncheck all forces first.</strong>
+            <StepHeader title="STEP 3: INCLINED PLANE" />
+            <p className="text-sm text-gray-700 mb-2">
+              We've reset the view for you. Now, let's tilt the surface.
             </p>
-            <ol className="list-decimal list-inside mt-3 space-y-1 leading-relaxed text-sm md:text-base text-gray-700">
-              <li>Click <strong className="text-red-600">"Reset Everything"</strong> (in Controls panel).</li>
-              <li>Set <strong className="text-blue-600">Angle</strong> to <strong>30°</strong>.</li>
-              <li>Check <strong className="text-blue-600">"Mass (Mg) & R_N"</strong>.</li>
-            </ol>
-            <div className="mt-4 p-3 bg-white rounded-md border-l-4 border-blue-500">
-              <p className="font-semibold text-base text-gray-800 mb-2">Question 1:</p>
-              <p className="text-base text-gray-700">What is the direction of the Weight (Mg)?</p>
-            </div>
-            {!answeredQuestions.has('step3-q1') ? (
-              <div className="flex flex-col sm:flex-row gap-2 mt-3">
+            <ul className="list-disc list-inside text-sm text-gray-700 space-y-1 mb-3">
+              <li>Set <strong>Angle</strong> to <strong>30°</strong></li>
+              <li>Check <strong>"Mass (Mg) & R_N"</strong></li>
+            </ul>
+
+            <div className="mt-3 p-3 bg-white rounded border border-gray-200">
+              <p className="text-sm font-semibold text-gray-800 mb-2">Q1: Direction of Weight (Mg)?</p>
+              <div className="flex gap-2 mb-2">
                 <button
-                  onClick={() => checkAnswer(
-                    'step3-q1',
-                    'down',
-                    'down',
-                    "Correct! Weight (Mg) *always* acts vertically down, towards the center of the Earth, regardless of the incline.",
-                    "Not quite. That's the direction of the Normal Force. Weight always points straight down. Try again."
-                  )}
-                  className="flex-1 bg-white border-2 border-gray-300 rounded-lg px-5 py-3 font-bold text-base uppercase hover:bg-gray-100 transition-all duration-200"
+                  onClick={() => checkAnswer('step3-q1', 'down', 'down', "Correct! Gravity is always clear down.", "No. Weight is always vertical.")}
+                  disabled={answeredQuestions.has('step3-q1')}
+                  className={`flex-1 py-2 px-3 rounded text-sm font-medium transition-colors ${answeredQuestions.has('step3-q1') ? 'bg-gray-50 text-gray-400' : 'bg-gray-100 hover:bg-gray-200'}`}
                 >
                   Vertically Down
                 </button>
                 <button
-                  onClick={() => checkAnswer(
-                    'step3-q1',
-                    'perp',
-                    'down',
-                    "Correct!",
-                    "Not quite. That's the direction of the Normal Force. Weight always points straight down. Try again."
-                  )}
-                  className="flex-1 bg-white border-2 border-gray-300 rounded-lg px-5 py-3 font-bold text-base uppercase hover:bg-gray-100 transition-all duration-200"
+                  onClick={() => checkAnswer('step3-q1', 'perp', 'down', "", "No. Weight is always vertical.")}
+                  disabled={answeredQuestions.has('step3-q1')}
+                  className={`flex-1 py-2 px-3 rounded text-sm font-medium transition-colors ${answeredQuestions.has('step3-q1') ? 'bg-gray-50 text-gray-400' : 'bg-gray-100 hover:bg-gray-200'}`}
                 >
                   Perpendicular
                 </button>
               </div>
-            ) : !answeredQuestions.has('step3-q2') ? (
-              <>
-                <div className="mt-4 p-3 bg-white rounded-md border-l-4 border-blue-500">
-                  <p className="font-semibold text-base text-gray-800 mb-2">Question 2:</p>
-                  <p className="text-base text-gray-700">Excellent. Now, what is the direction of the Normal Force (R_N)?</p>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-2 mt-3">
-                  <button
-                    onClick={() => {
-                      onShowFeedback("Perfect! The Normal Force (R_N) is *always* perpendicular to the surface that provides the support.");
-                      onMarkAnswered('step3-q2');
-                      onNextStep(4);
-                    }}
-                    className="flex-1 bg-white border-2 border-gray-300 rounded-lg px-5 py-3 font-bold text-base uppercase hover:bg-gray-100 transition-all duration-200"
-                  >
-                    Perpendicular
-                  </button>
-                  <button
-                    onClick={() => onShowFeedback("Not quite. The Normal Force must be perpendicular (or 'normal') to the surface. Try again.")}
-                    className="flex-1 bg-white border-2 border-gray-300 rounded-lg px-5 py-3 font-bold text-base uppercase hover:bg-gray-100 transition-all duration-200"
-                  >
-                    Vertically Up
-                  </button>
-                </div>
-              </>
-            ) : null}
+              <FeedbackMsg qId="step3-q1" />
+
+              {answeredQuestions.has('step3-q1') && (
+                <>
+                  <p className="text-sm font-semibold text-gray-800 mt-4 mb-2">Q2: Direction of Normal Force (R_N)?</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => checkAnswer('step3-q2', 'perp', 'perp', "Correct!", "Incorrect.")}
+                      disabled={answeredQuestions.has('step3-q2')}
+                      className={`flex-1 py-2 px-3 rounded text-sm font-medium transition-colors ${answeredQuestions.has('step3-q2') ? 'bg-gray-50 text-gray-400' : 'bg-gray-100 hover:bg-gray-200'}`}
+                    >
+                      Perpendicular to Surface
+                    </button>
+                    <button
+                      onClick={() => checkAnswer('step3-q2', 'up', 'perp', "", "Incorrect. Normal means perpendicular.")}
+                      disabled={answeredQuestions.has('step3-q2')}
+                      className={`flex-1 py-2 px-3 rounded text-sm font-medium transition-colors ${answeredQuestions.has('step3-q2') ? 'bg-gray-50 text-gray-400' : 'bg-gray-100 hover:bg-gray-200'}`}
+                    >
+                      Vertically Up
+                    </button>
+                  </div>
+                  <FeedbackMsg qId="step3-q2" />
+                </>
+              )}
+            </div>
+
+            {answeredQuestions.has('step3-q2') && (
+              <button onClick={() => onNextStep(4)} className="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-bold text-sm">
+                Next →
+              </button>
+            )}
           </div>
         )}
 
         {/* Step 4 */}
         {currentStep === 4 && (
           <div>
-            <div className="bg-blue-600 text-white px-4 py-2 rounded-md inline-block mb-3 text-base font-bold">
-              STEP 4: WHEN & HOW TO RESOLVE WEIGHT
-            </div>
-            <p className="mt-2 leading-relaxed text-sm md:text-base text-gray-700">
-              On an incline, our analysis axes (x' parallel to plane, y' perpendicular) are <em>tilted</em>. The Weight (Mg) is vertical, so it does not lie purely along either axis — we must resolve it.
+            <StepHeader title="STEP 4: COMPONENTS" />
+            <p className="text-sm text-gray-700 mb-2">
+              Since weight (Mg) isn't perpendicular to the surface anymore, we split it.
             </p>
-            <div className="mt-4 p-3 bg-white rounded-md border-l-4 border-blue-500">
-              <p className="font-semibold text-base text-gray-800 mb-2">Question 1:</p>
-              <p className="text-base text-gray-700">When do we need to split (resolve) the Weight into x- and y-components?</p>
+            <div className="bg-blue-50 p-2 rounded text-xs text-blue-900 mb-3 border border-blue-100">
+              <strong>Key Concept:</strong> R_N balances the perpendicular component of weight.
             </div>
-            {!answeredQuestions.has('step4-q1') && (
-              <div className="flex flex-col sm:flex-row gap-2 mt-3">
-                <button
-                  onClick={() => {
-                    onShowFeedback("Correct! Only when axes are not aligned with the force — e.g. on an inclined plane (θ ≠ 0°) or using rotated axes.");
-                    onMarkAnswered('step4-q1');
-                  }}
-                  className="flex-1 bg-white border-2 border-gray-300 rounded-lg px-5 py-3 font-bold text-base uppercase hover:bg-gray-100 transition-all duration-200"
-                >
-                  When θ ≠ 0° (Incline)
-                </button>
-                <button
-                  onClick={() => onShowFeedback("Not quite. On a flat surface (θ = 0°) Mg already aligns with the y-axis. No need to resolve. Try again.")}
-                  className="flex-1 bg-white border-2 border-gray-300 rounded-lg px-5 py-3 font-bold text-base uppercase hover:bg-gray-100 transition-all duration-200"
-                >
-                  Always
-                </button>
-              </div>
-            )}
-            {answeredQuestions.has('step4-q1') && (
-              <>
-                <ol className="list-decimal list-inside mt-4 space-y-1 leading-relaxed text-sm md:text-base text-gray-700">
-                  <li>Components: <strong className="text-blue-600">Mg·sin(θ)</strong> (parallel, drives motion) & <strong className="text-blue-600">Mg·cos(θ)</strong> (perpendicular, balanced by R_N).</li>
-                  <li>Toggle <strong className="text-blue-600">"Show Equations"</strong> to see ΣF expressions.</li>
-                </ol>
-                <div className="mt-4 p-3 bg-white rounded-md border-l-4 border-blue-500">
-                  <p className="font-semibold text-base text-gray-800 mb-2">Question 2:</p>
-                  <p className="text-base text-gray-700">Look at the ΣF<sub>y'</sub> equation. Which component of weight does the Normal Force (R_N) balance?</p>
-                </div>
-                {!answeredQuestions.has('step4-q2') ? (
-                  <div className="flex flex-col sm:flex-row gap-2 mt-3">
-                    <button
-                      onClick={() => {
-                        onShowFeedback("Exactly! R_N balances Mg·cos(θ), the perpendicular component.");
-                        onMarkAnswered('step4-q2');
-                      }}
-                      className="flex-1 bg-white border-2 border-gray-300 rounded-lg px-5 py-3 font-bold text-base uppercase hover:bg-gray-100 transition-all duration-200"
-                    >
-                      Mg·cos(θ)
-                    </button>
-                    <button
-                      onClick={() => onShowFeedback("Not quite. Mg·sin(θ) lies along the plane (x'). R_N is perpendicular (y'). Try again.")}
-                      className="flex-1 bg-white border-2 border-gray-300 rounded-lg px-5 py-3 font-bold text-base uppercase hover:bg-gray-100 transition-all duration-200"
-                    >
-                      Mg·sin(θ)
-                    </button>
-                  </div>
-                ) : (
+
+            <div className="mt-3 p-3 bg-white rounded border border-gray-200">
+              <p className="text-sm font-semibold text-gray-800 mb-2">Q: Which component does Normal Force (R_N) balance?</p>
+
+              {!answeredQuestions.has('step4-q2') ? (
+                <div className="flex gap-2">
                   <button
-                    onClick={() => onNextStep(5)}
-                    className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg px-6 py-3 uppercase text-base shadow transition-all duration-200"
+                    onClick={() => checkAnswer('step4-q2', 'cos', 'cos', "Correct! R_N = Mg cos(θ).", "Incorrect. Sin is parallel.")}
+                    className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 rounded text-sm font-medium transition-colors"
                   >
-                    Next Step →
+                    Mg cos(θ) (Perp)
                   </button>
-                )}
-              </>
+                  <button
+                    onClick={() => checkAnswer('step4-q2', 'sin', 'cos', "", "Incorrect. Sin is parallel.")}
+                    className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 rounded text-sm font-medium transition-colors"
+                  >
+                    Mg sin(θ) (Parallel)
+                  </button>
+                </div>
+              ) : (
+                <div className="text-sm text-green-700 font-medium">✓ Correct! R_N balances Mg cos(θ).</div>
+              )}
+              <FeedbackMsg qId="step4-q2" />
+            </div>
+
+            {answeredQuestions.has('step4-q2') && (
+              <button onClick={() => onNextStep(5)} className="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-bold text-sm">
+                Next →
+              </button>
             )}
           </div>
         )}
@@ -318,83 +279,65 @@ const GuidedLearning = ({
         {/* Step 5 */}
         {currentStep === 5 && (
           <div>
-            <div className="bg-blue-600 text-white px-4 py-2 rounded-md inline-block mb-3 text-base font-bold">
-              STEP 5: EQUILIBRIUM ON INCLINE
-            </div>
-            <p className="mt-2 leading-relaxed text-sm md:text-base text-gray-700">
-              The component <strong className="text-blue-600">Mg·sin(θ)</strong> is trying to pull the block *down* the incline. Let's add friction to stop it.
+            <StepHeader title="STEP 5: EQUILIBRIUM" />
+            <p className="text-sm text-gray-700 mb-2">
+              <strong>Mg sin(θ)</strong> pulls the block DOWN the slope. Friction must stop it.
             </p>
-            <ol className="list-decimal list-inside mt-3 space-y-1 leading-relaxed text-sm md:text-base text-gray-700">
-              <li>Select <strong className="text-yellow-600">"Impending Motion Down-Slope"</strong>.</li>
-            </ol>
-            <div className="mt-4 p-3 bg-white rounded-md border-l-4 border-blue-500">
-              <p className="font-semibold text-base text-gray-800 mb-2">Question:</p>
-              <p className="text-base text-gray-700">To prevent the block from sliding down, what direction must the friction force (F_f) act?</p>
+            <ul className="list-disc list-inside text-sm text-gray-700 space-y-1 mb-3">
+              <li>Select <strong>"Motion Down-Slope"</strong></li>
+            </ul>
+
+            <div className="mt-3 p-3 bg-white rounded border border-gray-200">
+              <p className="text-sm font-semibold text-gray-800 mb-2">Q: To stop sliding DOWN, where does Friction point?</p>
+
+              {!answeredQuestions.has('step5') ? (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      checkAnswer('step5', 'up', 'up', "Correct! Friction points UP to stop DOWN motion.", "Incorrect.");
+                      onUpdateSimulation({ motionDirection: 'down' });
+                    }}
+                    className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 rounded text-sm font-medium transition-colors"
+                  >
+                    Up the Incline
+                  </button>
+                  <button
+                    onClick={() => checkAnswer('step5', 'down', 'up', "", "Incorrect. The block is sliding down, so friction opposes (up).")}
+                    className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 rounded text-sm font-medium transition-colors"
+                  >
+                    Down the Incline
+                  </button>
+                </div>
+              ) : (
+                <div className="text-sm text-green-700 font-medium">✓ Correct! Friction points UP.</div>
+              )}
+              <FeedbackMsg qId="step5" />
             </div>
-            {!answeredQuestions.has('step5') ? (
-              <div className="flex flex-col sm:flex-row gap-2 mt-3">
-                <button
-                  onClick={() => {
-                    onShowFeedback("You got it! The block wants to slide *down* due to Mg·sin(θ), so the friction force (F_f) must act *up* the incline to oppose it.");
-                    onMarkAnswered('step5');
-                    onUpdateSimulation({ motionDirection: 'down' });
-                  }}
-                  className="flex-1 bg-white border-2 border-gray-300 rounded-lg px-5 py-3 font-bold text-base uppercase hover:bg-gray-100 transition-all duration-200"
-                >
-                  Up the Incline
-                </button>
-                <button
-                  onClick={() => onShowFeedback("Not quite. Remember, friction *opposes* impending motion. The block is about to slide *down*. Try again.")}
-                  className="flex-1 bg-white border-2 border-gray-300 rounded-lg px-5 py-3 font-bold text-base uppercase hover:bg-gray-100 transition-all duration-200"
-                >
-                  Down the Incline
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => onNextStep(6)}
-                className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg px-6 py-3 uppercase text-base shadow transition-all duration-200"
-              >
-                Finish Module →
+
+            {answeredQuestions.has('step5') && (
+              <button onClick={() => onNextStep(6)} className="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-bold text-sm">
+                Finish →
               </button>
             )}
           </div>
         )}
 
-        {/* Step 6 - Complete */}
+        {/* Step 6 */}
         {currentStep === 6 && (
-          <div>
-            <div className="bg-green-600 text-white px-4 py-2 rounded-md inline-block mb-3 text-base font-bold">
-              ✓ MODULE COMPLETE!
-            </div>
-            <p className="mt-2 leading-relaxed text-sm md:text-base font-semibold text-gray-700">
-              You've mastered the core concepts!
-            </p>
-            <div className="mt-4 p-4 bg-white rounded-md border-l-4 border-green-500">
-              <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-                <li><strong className="text-green-600">Normal Force (R_N)</strong> is *perpendicular* to the surface.</li>
-                <li><strong className="text-blue-600">Weight (Mg)</strong> is *vertically down*.</li>
-                <li>Weight is resolved into <strong className="text-blue-600">Mg·cos(θ)</strong> and <strong className="text-blue-600">Mg·sin(θ)</strong>.</li>
-                <li><strong className="text-yellow-600">Friction (F_f)</strong> *opposes* impending motion.</li>
-              </ul>
-            </div>
-            <p className="mt-4 font-bold text-sm text-blue-600">
-              You are now in "Free Play" mode.
-            </p>
-            <div className="mt-3 p-3 bg-yellow-50 rounded-md border-l-4 border-yellow-500">
-              <p className="font-bold text-sm text-gray-800">Note on Ch 5.3:</p>
-              <p className="text-xs text-gray-700 mt-1">
-                For forces at an angle (like the 120N example), you must first resolve that force into its *own* parallel (x') and perpendicular (y') components. Then, add them to the ΣFx and ΣFy equations.
-              </p>
-            </div>
+          <div className="text-center">
+            <div className="text-4xl mb-2">🎉</div>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">Module Complete!</h3>
+            <p className="text-sm text-gray-600 mb-4">You've mastered the basics of Free Body Diagrams.</p>
+
             <button
               onClick={onReset}
-              className="mt-4 w-full bg-gray-600 hover:bg-gray-700 text-white font-bold uppercase rounded-lg px-6 py-3 text-sm shadow transition-all duration-200"
+              className="w-full bg-gray-800 hover:bg-black text-white py-3 rounded-lg font-bold shadow-lg transition-transform transform hover:scale-105"
             >
-              Restart
+              Start Free Play Mode
             </button>
           </div>
         )}
+
       </div>
     </div>
   );

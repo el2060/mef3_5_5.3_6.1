@@ -18,7 +18,7 @@ const Controls = ({ simulation, onUpdateSimulation, onReset, currentStep }: Cont
         <span className="text-3xl">🎛️</span>
         Controls
       </h2>
-      
+
       <div className="space-y-3">
         {/* Angle Section */}
         <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
@@ -30,7 +30,7 @@ const Controls = ({ simulation, onUpdateSimulation, onReset, currentStep }: Cont
             <input
               type="range"
               min="0"
-              max="60"
+              max="90"
               value={simulation.angle}
               onChange={(e) => onUpdateSimulation({ angle: Number(e.target.value) })}
               className="w-full h-2 accent-blue-600"
@@ -41,7 +41,7 @@ const Controls = ({ simulation, onUpdateSimulation, onReset, currentStep }: Cont
         {/* Forces Section */}
         <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
           <h3 className="text-base font-semibold text-gray-600 mb-3 uppercase tracking-wide">Forces</h3>
-          
+
           {/* Mass Control */}
           <div className={`mb-4 pb-4 border-b border-gray-100 ${getSpotlightClass(1)}`}>
             <label className="flex items-center text-base font-medium mb-2 cursor-pointer hover:text-green-700 transition-colors">
@@ -116,7 +116,7 @@ const Controls = ({ simulation, onUpdateSimulation, onReset, currentStep }: Cont
         <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
           <h3 className="text-base font-semibold text-gray-600 mb-2 uppercase tracking-wide">Friction (F_f)</h3>
           <p className="text-sm text-gray-500 mb-3 italic">Appears when impending motion is set</p>
-          
+
           <div className={`${getSpotlightClass(2)}`}>
             <div className="space-y-2 mb-3">
               <label className="flex items-center cursor-pointer text-sm hover:bg-gray-50 p-2 rounded transition-colors">
@@ -150,7 +150,7 @@ const Controls = ({ simulation, onUpdateSimulation, onReset, currentStep }: Cont
                 <span className="font-medium">Impending Motion Down-Slope</span>
               </label>
             </div>
-            
+
             <div className="text-sm text-gray-600 mb-2">μ (Coefficient): <span className="font-semibold text-gray-800">{simulation.mu.toFixed(2)}</span></div>
             <input
               type="range"
