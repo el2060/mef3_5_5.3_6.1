@@ -431,9 +431,7 @@ const Visualization = ({ simulation }: VisualizationProps) => {
             // If Up Motion (Friction Down), put on bottom/left side?
             // Actually, usually drawn at contact surface.
 
-            // Base at center of bottom face?
-            const bottomX = blockX - (blockSize / 2 + 2) * -Math.sin(angleRad); // Normal Vector (-sin, -cos) is UP. Bottom is DOWN (+sin, +cos)
-            const bottomY = blockY - (blockSize / 2 + 2) * -Math.cos(angleRad);
+
 
             // Let's stick to center-ish but offset perpendicular
             // Center + Offset * (-Normal) = Center + Offset * (sin, cos)

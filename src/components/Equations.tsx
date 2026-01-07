@@ -100,7 +100,8 @@ const Equations = ({ simulation, onToggle }: EquationsProps) => {
                   // mgSin is usually positive in this axis definition
                   parts.push(mgSin);
 
-                  const { scenario, push, friction, motionDirection } = simulation;
+                  const { scenario, push, motionDirection } = simulation;
+                  const { friction } = forces;
 
                   // Push (Now mapped to Force F2)
                   if (push > 0 || scenario === 'external_force') {
