@@ -1,10 +1,9 @@
 interface HeaderProps {
-  onShowInfo: () => void;
   viewMode: 'guided' | 'freeform';
   onToggleViewMode: (mode: 'guided' | 'freeform') => void;
 }
 
-const Header = ({ onShowInfo, viewMode, onToggleViewMode }: HeaderProps) => {
+const Header = ({ viewMode, onToggleViewMode }: HeaderProps) => {
   return (
     <div className="p-4 md:p-6 bg-gradient-to-r from-blue-600 to-indigo-700 text-white flex flex-col gap-4">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -16,12 +15,6 @@ const Header = ({ onShowInfo, viewMode, onToggleViewMode }: HeaderProps) => {
             Chapters 5, 5.3 & 6.1: Free Body Diagrams, Friction & Equilibrium
           </p>
         </div>
-        <button
-          onClick={onShowInfo}
-          className="bg-white/10 hover:bg-white/20 text-white px-5 py-2.5 rounded-lg text-base font-bold transition-all flex items-center gap-2 backdrop-blur-sm shadow-sm self-start md:self-auto"
-        >
-          ℹ️ App Info
-        </button>
       </div>
 
       <div className="flex bg-blue-800/30 p-1 rounded-xl w-full md:w-auto self-start backdrop-blur-sm">

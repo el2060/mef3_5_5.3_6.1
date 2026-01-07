@@ -14,6 +14,8 @@ function App() {
   const [modalContent, setModalContent] = useState<string>('');
   const [showModal, setShowModal] = useState(false);
   const [viewMode, setViewMode] = useState<'guided' | 'freeform'>('guided');
+  const [hasStarted, setHasStarted] = useState(false);
+
 
   const updateSimulation = (updates: Partial<SimulationState>) => {
     setSimulation(prev => ({ ...prev, ...updates }));
@@ -65,10 +67,7 @@ function App() {
     setShowModal(true);
   };
 
-  const showAppInfo = () => {
-    const info = `Guided Physics Simulation\n\nUpdated: Nov 14, 2025\n\nPurpose: Learn and explore Free Body Diagrams, friction, and equilibrium for Chapters 5, 5.3 & 6.1.\n\nModes:\n• Guided Mode – follow structured steps & answer conceptual checks.\n• Freeform Mode – experiment with angle, forces, friction anytime.\n\nFeatures:\n• Dynamic force scaling (arrows stay inside view).\n• Color-coded force legend (Mg, R_N, T, P, F_f).\n• Reset Everything button clears simulation & progress.\n• Real-time equilibrium equations panel.\n• Improved visualization & accessible labels.\n\nTip: Start Guided, then explore Freeform to test hypotheses.`;
-    showFeedback(info);
-  };
+
 
   const markQuestionAnswered = (questionId: string) => {
     setGuidedLearning(prev => ({
@@ -87,7 +86,7 @@ function App() {
 
       <div className="max-w-[1800px] mx-auto bg-white rounded-2xl shadow-card overflow-hidden border border-gray-200/50">
         <Header
-          onShowInfo={showAppInfo}
+
           viewMode={viewMode}
           onToggleViewMode={handleViewModeChange}
         />

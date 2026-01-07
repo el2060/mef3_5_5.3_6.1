@@ -20,32 +20,12 @@ const Instructions = () => {
       {isExpanded && (
         <div className="mt-3 space-y-3">
 
-          <div className="flex-1 bg-blue-50/80 rounded-lg p-4 border-2 border-blue-100">
-            <p className="font-bold text-blue-800 text-base mb-1">Guided Mode</p>
-            <p className="text-sm text-blue-900/80 font-medium">Follow the steps to learn about Free Body Diagrams.</p>
-          </div>
-
-
-          <div className="bg-white/80 rounded-lg p-3 border border-gray-200 shadow-sm">
-            <h4 className="text-sm font-bold text-gray-700 mb-2">🎨 Force Colors</h4>
-            <div className="flex flex-wrap gap-3 text-xs">
-              <span className="flex items-center gap-1.5 bg-blue-50 px-2 py-1 rounded">
-                <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
-                <span>Weight (Mg)</span>
-              </span>
-              <span className="flex items-center gap-1.5 bg-green-50 px-2 py-1 rounded">
-                <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>
-                <span>Normal (R_N)</span>
-              </span>
-              <span className="flex items-center gap-1.5 bg-red-50 px-2 py-1 rounded">
-                <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
-                <span>Tension (T)</span>
-              </span>
-              <span className="flex items-center gap-1.5 bg-yellow-50 px-2 py-1 rounded">
-                <span className="w-2.5 h-2.5 rounded-full bg-yellow-400"></span>
-                <span>Friction (F_f)</span>
-              </span>
-            </div>
+          <div className="flex-1 bg-white p-4 rounded-lg border border-gray-100 shadow-sm text-sm">
+            <ol className="list-decimal pl-4 space-y-2 text-gray-700 font-medium">
+              <li><span className="font-bold text-gray-900">Start</span> the simulation.</li>
+              <li>Set <span className="font-bold text-gray-900">Mass</span> → diagram updates instantly.</li>
+              <li>Check <span className="font-bold text-gray-900">Forces</span> → Friction → Equilibrium.</li>
+            </ol>
           </div>
         </div>
       )}

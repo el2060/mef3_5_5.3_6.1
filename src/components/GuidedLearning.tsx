@@ -15,6 +15,8 @@ interface GuidedLearningProps {
   onMarkAnswered: (questionId: string) => void;
   simulation: SimulationState;
   onUpdateSimulation: (updates: Partial<SimulationState>) => void;
+  hasStarted: boolean;
+  onStart: () => void;
 }
 
 const GuidedLearning = ({
@@ -27,6 +29,8 @@ const GuidedLearning = ({
   onMarkAnswered,
   simulation,
   onUpdateSimulation,
+  hasStarted,
+  onStart,
 }: GuidedLearningProps) => {
 
   const [feedback, setFeedback] = useState<{ [key: string]: { type: 'success' | 'error', text: string } }>({});
@@ -69,73 +73,105 @@ const GuidedLearning = ({
           <span>📖</span> Guided Learning
         </h2>
         {currentStep > 0 && currentStep <= 6 && (
-          <div className="flex items-center gap-3">
-            <div className="text-sm font-semibold text-gray-500">Step {currentStep} of 6</div>
-            <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+          <div className="flex items-center gap-1.5 bg-gray-100 px-3 py-1.5 rounded-full">
+            {[1, 2, 3, 4, 5, 6].map(step => (
               <div
-                className="h-full bg-blue-600 transition-all duration-500 ease-out"
-                style={{ width: `${(currentStep / 6) * 100}%` }}
+                key={step}
+                className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${step === currentStep ? 'bg-blue-600 scale-110' : step < currentStep ? 'bg-blue-400' : 'bg-gray-300'}`}
               />
-            </div>
+            ))}
           </div>
         )}
       </div>
 
       <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 transition-all duration-500">
 
+        {!hasStarted && (
+          <div className="text-center py-10">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Welcome to Forces & Motion</h3>
+            <p className="text-gray-600 mb-8">Follow the guided steps to master Free Body Diagrams.</p>
+            <button
+              onClick={onStart}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold text-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02]"
+            >
+              Start Simulation
+            </button>
+            <p className="text-sm text-gray-500 mt-3">We load Step 1 automatically</p>
+          </div>
+        )}
+
         {/* Step 1 */}
-        {currentStep === 1 && (
+        {hasStarted && currentStep === 1 && (
           <div>
-            <StepHeader title="STEP 1: FLAT SURFACE" />
-            <p className="text-base text-gray-700 mb-4 font-medium">
-              Start with a flat surface (Angle 0°).
+            {/* Step 1: Simplified Flow */}
+            <p className="text-lg font-bold text-gray-800 mb-4">
+              1. Set the block's mass
             </p>
-            {/* Contextual Control: Angle & Mass */}
-            <div className="my-6 space-y-4">
-              <AngleControl
-                simulation={simulation}
-                onUpdateSimulation={onUpdateSimulation}
-                className={simulation.angle !== 0 ? 'ring-2 ring-yellow-400 bg-yellow-50' : 'bg-green-50 border-green-200'}
-              />
+
+            {/* Mass Control - Always Visible */}
+            <div className="mb-6">
               <ForceControl
                 simulation={simulation}
                 onUpdateSimulation={onUpdateSimulation}
                 showMassOnly={true}
               />
+              <p className="text-sm text-gray-500 mt-2 italic">Hint: Diagram updates instantly</p>
             </div>
 
-            {simulation.angle !== 0 && (
-              <div className="mb-2 text-xs bg-yellow-100 text-yellow-800 p-2 rounded">
-                ⚠️ Set angle to 0° to continue.
-              </div>
-            )}
+            {/* Check Understanding - Revealed after Mass (Simulated by just showing it for now, or we can track interaction) */}
+            {/* For now, let's keep it simple: Show Check Understanding next */}
 
-            <div className="mt-4 p-5 bg-white rounded-xl border-2 border-gray-100 shadow-sm">
-              <p className="text-lg font-bold text-gray-800 mb-4">Q: Direction of Normal Force (R_N) on flat surface?</p>
+            <div className={`transition-all duration-500 ${true ? 'opacity-100' : 'opacity-0'}`}>
+              <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm mb-4">
+                <p className="text-base font-bold text-gray-800 mb-3">Check understanding:</p>
+                <p className="text-sm text-gray-600 mb-3">Which way does Normal Force (R_N) point?</p>
 
-              {!answeredQuestions.has('step1-q1') ? (
-                <div className="flex flex-col gap-3">
+                <div className="flex gap-2">
                   <button
-                    onClick={() => { setFeedback({ ...feedback, 'step1-q1': { type: 'success', text: "Correct! R_N is vertical (perpendicular to surface)." } }); onMarkAnswered('step1-q1'); }}
-                    className="flex-1 py-3 px-4 bg-gray-50 hover:bg-blue-50 border-2 border-gray-200 hover:border-blue-300 rounded-lg text-base font-semibold transition-all text-left"
+                    onClick={() => { setFeedback({ ...feedback, 'step1-q1': { type: 'success', text: "Correct! R_N is perpendicular." } }); onMarkAnswered('step1-q1'); }}
+                    className={`flex-1 py-2 px-2 rounded-lg text-sm font-bold border-2 ${answeredQuestions.has('step1-q1') ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 hover:bg-blue-50 border-gray-200 hover:border-blue-300'}`}
                   >
-                    Short Answer: Vertically Up
+                    ↑ Up (Perp)
                   </button>
                   <button
                     onClick={() => setFeedback({ ...feedback, 'step1-q1': { type: 'error', text: "Incorrect. Normal means perpendicular." } })}
-                    className="flex-1 py-3 px-4 bg-gray-50 hover:bg-red-50 border-2 border-gray-200 hover:border-red-300 rounded-lg text-base font-semibold transition-all text-left"
+                    className="flex-1 py-2 px-2 bg-gray-50 hover:bg-red-50 border-2 border-gray-200 hover:border-red-300 rounded-lg text-sm font-bold text-gray-600"
                   >
-                    Short Answer: Horizontal
+                    → Right
                   </button>
                 </div>
-              ) : (
-                <div className="text-base text-green-700 font-bold bg-green-50 p-3 rounded-lg border border-green-200">✓ Correct! R_N is perpendicular.</div>
-              )}
-              <FeedbackMsg qId="step1-q1" />
+                <FeedbackMsg qId="step1-q1" />
+              </div>
+
+              {/* More Controls (Collapsed) */}
+              <div className="mt-4 border-t border-gray-100 pt-4 flex justify-between items-start">
+                <details className="group flex-1">
+                  <summary className="flex items-center gap-2 cursor-pointer text-sm font-bold text-gray-500 hover:text-blue-600 w-fit">
+                    <span>⚙️ More controls</span>
+                    <span className="group-open:rotate-180 transition-transform">▼</span>
+                  </summary>
+                  <div className="mt-3 pl-2 border-l-2 border-gray-100">
+                    <AngleControl
+                      simulation={simulation}
+                      onUpdateSimulation={onUpdateSimulation}
+                    />
+                  </div>
+                </details>
+                <button
+                  onClick={onReset}
+                  className="text-xs text-gray-400 font-bold hover:text-red-500 uppercase tracking-widest py-1 border-b border-transparent hover:border-red-200 transition-all"
+                >
+                  Reset
+                </button>
+              </div>
+
             </div>
 
             {answeredQuestions.has('step1-q1') && (
-              <button onClick={() => onNextStep(2)} className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold text-lg shadow-md hover:shadow-lg transition-all">
+              <button
+                onClick={() => onNextStep(2)}
+                className="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold text-lg shadow-md transition-all animate-bounce-subtle"
+              >
                 Next Step →
               </button>
             )}

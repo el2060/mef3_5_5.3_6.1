@@ -4,9 +4,10 @@ import { calculateForces } from '../utils/physics';
 
 interface VisualizationProps {
   simulation: SimulationState;
+  hasStarted?: boolean;
 }
 
-const Visualization = ({ simulation }: VisualizationProps) => {
+const Visualization = ({ simulation, hasStarted = true }: VisualizationProps) => {
   const forces = calculateForces(simulation);
   const { angle, showMass, showTension, showPush, motionDirection, push } = simulation;
   const { weight, normalForce, friction, tension } = forces;
@@ -18,6 +19,18 @@ const Visualization = ({ simulation }: VisualizationProps) => {
   const width = 900;
   const height = 650;
   const padding = 70;
+
+  if (!hasStarted) {
+    return (
+      <div className="p-4 md:p-6 bg-white border-b border-gray-200 h-full flex flex-col justify-center items-center min-h-[500px]">
+        <div className="text-6xl mb-4">👋</div>
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">No diagram loaded yet</h2>
+        <p className="text-lg text-gray-500 mb-6 font-medium">Tap "Start Simulation" to begin</p>
+      </div>
+    );
+  }
+
+  // Centering logic continues...
   const centerX = width / 2;
   const centerY = height * 0.6;
 
