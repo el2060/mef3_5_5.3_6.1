@@ -44,7 +44,7 @@ export const calculateForces = (state: SimulationState) => {
 const fmt = (n: number) => parseFloat(n.toFixed(2)).toString();
 
 export const getEquations = (state: SimulationState, forces: ReturnType<typeof calculateForces>) => {
-  const { angle, mass, mu, motionDirection, showTension, showPush, push } = state;
+  const { angle, mu, motionDirection, showTension, showPush, push } = state;
   const { normalForce, weightPerpendicular, weightParallel, friction } = forces;
 
   const angleStr = angle.toFixed(0);

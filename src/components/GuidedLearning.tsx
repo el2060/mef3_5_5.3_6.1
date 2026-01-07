@@ -19,7 +19,7 @@ const GuidedLearning = ({
   onNextStep,
   onReset,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  onShowFeedback, // Keeping for compatibility but not using for questions
+  onShowFeedback: _onShowFeedback, // Keeping for compatibility but not using for questions
   onMarkAnswered,
   simulation,
   onUpdateSimulation,
@@ -93,7 +93,7 @@ const GuidedLearning = ({
               {!answeredQuestions.has('step1-q1') ? (
                 <div className="flex gap-2">
                   <button
-                    onClick={() => setFeedback({ ...feedback, 'step1-q1': { type: 'success', text: "Correct! R_N is vertical (perpendicular to surface)." } }) || onMarkAnswered('step1-q1')}
+                    onClick={() => { setFeedback({ ...feedback, 'step1-q1': { type: 'success', text: "Correct! R_N is vertical (perpendicular to surface)." } }); onMarkAnswered('step1-q1'); }}
                     className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 rounded text-sm font-medium transition-colors"
                   >
                     Vertically Up
