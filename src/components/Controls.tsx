@@ -1,4 +1,7 @@
 import { SimulationState } from '../types/simulation';
+import { AngleControl } from './controls/AngleControl';
+import { ForceControl } from './controls/ForceControl';
+import { FrictionControl } from './controls/FrictionControl';
 
 interface ControlsProps {
   simulation: SimulationState;
@@ -50,53 +53,24 @@ const Controls = ({ simulation, onUpdateSimulation, onReset, currentStep }: Cont
 
         <div className="space-y-3">
           {/* Angle Section - Always Relevant */}
-          <div className="bg-white border text-gray-800 border-gray-200 rounded-xl p-5 shadow-sm transition-opacity duration-300">
-            <h3 className="text-lg font-bold text-gray-700 mb-4 uppercase tracking-wide flex items-center gap-2">
-              <span>📐</span> Angle
-            </h3>
-            <div className={`${getSpotlightClass(3)}`}>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-4xl font-extrabold text-blue-600">{simulation.angle}°</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="90"
-                value={simulation.angle}
-                onChange={(e) => onUpdateSimulation({ angle: Number(e.target.value) })}
-                className="w-full h-4 accent-blue-600 cursor-pointer"
-              />
-            </div>
-          </div>
+          <AngleControl
+            simulation={simulation}
+            onUpdateSimulation={onUpdateSimulation}
+            className={`transition-opacity duration-300 ${getSpotlightClass(3)}`}
+          />
 
           {/* Forces Section */}
-          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-            <h3 className="text-lg font-bold text-gray-700 mb-4 uppercase tracking-wide flex items-center gap-2">
-              <span>💪</span> Forces
-            </h3>
+          <ForceControl
+            simulation={simulation}
+            onUpdateSimulation={onUpdateSimulation}
+            className={`transition-opacity duration-300 ${getSpotlightClass(1)}`}
+          />
 
-            {/* Mass Control */}
-            <div className={`mb-6 pb-4 border-b border-gray-100 ${getSpotlightClass(1)}`}>
-              <label className="flex items-center text-lg font-bold mb-3 cursor-pointer hover:text-green-700 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={simulation.showMass}
-                  onChange={(e) => onUpdateSimulation({ showMass: e.target.checked })}
-                  className="mr-3 w-5 h-5 accent-green-600"
-                />
-                <span className="text-green-600 font-bold">Mass (Mg) & Normal Reaction Force (R<sub>N</sub>)</span>
-              </label>
-              <div className="text-base text-gray-600 mb-2 font-medium">Mass (kg) <small className="text-gray-400">(Block)</small>: <span className="font-bold text-gray-900 text-lg">{simulation.mass}</span></div>
-              <input
-                type="range"
-                min="5"
-                max="50"
-                value={simulation.mass}
-                onChange={(e) => onUpdateSimulation({ mass: Number(e.target.value) })}
-                disabled={!simulation.showMass}
-                className="w-full h-4 accent-green-600 cursor-pointer"
-              />
-            </div>
+          {/* Specific controls for Scenarios (keep as is for now or refactor later if needed) */}
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+
+            {/* Ch 5.3 External Force Controls - Custom logic, keep here for now? Or extract? */}
+            {/* Actually, let's keep the specialized scenario controls here for now as they are quite specific */}
 
             {/* Ch 5.3 External Force Controls */}
             {simulation.scenario === 'external_force' && (
@@ -152,109 +126,14 @@ const Controls = ({ simulation, onUpdateSimulation, onReset, currentStep }: Cont
               </div>
             )}
 
-            {/* Tension Control */}
-            <div className={`mb-4 pb-4 border-b border-gray-100 ${getSpotlightClass(2)} transition-opacity duration-300 ${simulation.scenario === 'basic' || simulation.scenario === 'pulley' ? 'opacity-100' : 'opacity-40 grayscale'}`}>
-              <label className="flex items-center text-base font-medium mb-2 cursor-pointer hover:text-red-700 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={simulation.showTension}
-                  onChange={(e) => onUpdateSimulation({ showTension: e.target.checked })}
-                  disabled={simulation.scenario === 'external_force'}
-                  className="mr-3 w-5 h-5 accent-red-600"
-                />
-                <span className="text-red-600 font-semibold">Force (F<sub>1</sub>)</span>
-              </label>
-              <div className="text-sm text-gray-600 mb-2">Force (N): <span className="font-semibold text-gray-800">{simulation.tension}</span></div>
-              <input
-                type="range"
-                min="0"
-                max="200"
-                value={simulation.tension}
-                onChange={(e) => onUpdateSimulation({ tension: Number(e.target.value) })}
-                disabled={!simulation.showTension || simulation.scenario === 'external_force'}
-                className="w-full h-2 accent-red-600"
-              />
-            </div>
-
-            {/* Push Control */}
-            <div className={`${getSpotlightClass(2)} transition-opacity duration-300 ${simulation.scenario === 'basic' || simulation.scenario === 'external_force' ? 'opacity-100' : 'opacity-40 grayscale'}`}>
-              <label className="flex items-center text-base font-medium mb-2 cursor-pointer hover:text-cyan-700 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={simulation.showPush}
-                  onChange={(e) => onUpdateSimulation({ showPush: e.target.checked })}
-                  disabled={simulation.scenario === 'pulley'}
-                  className="mr-3 w-5 h-5 accent-cyan-600"
-                />
-                <span className="text-cyan-600 font-semibold">Force (F<sub>2</sub>)</span>
-              </label>
-              <div className="text-sm text-gray-600 mb-2">Force (N): <span className="font-semibold text-gray-800">{simulation.push}</span></div>
-              <input
-                type="range"
-                min="0"
-                max="200"
-                value={simulation.push}
-                onChange={(e) => onUpdateSimulation({ push: Number(e.target.value) })}
-                disabled={!simulation.showPush || simulation.scenario === 'pulley'}
-                className="w-full h-2 accent-cyan-600"
-              />
-            </div>
           </div>
 
           {/* Friction Section */}
-          <div className="bg-white border-2 border-gray-200 rounded-xl p-5 shadow-sm">
-            <h3 className="text-lg font-bold text-gray-700 mb-2 uppercase tracking-wide flex items-center gap-2">
-              <span>🛑</span> Friction Force (F<sub>f</sub>)
-            </h3>
-            <p className="text-sm text-gray-500 mb-4 italic">Set impending motion direction:</p>
-
-            <div className={`${getSpotlightClass(2)}`}>
-              <div className="space-y-3 mb-5">
-                <label className="flex items-center cursor-pointer text-base hover:bg-gray-50 p-2 rounded-lg transition-colors border border-transparent hover:border-gray-200">
-                  <input
-                    type="radio"
-                    name="friction"
-                    checked={simulation.motionDirection === 'none'}
-                    onChange={() => onUpdateSimulation({ motionDirection: 'none' })}
-                    className="mr-3 w-5 h-5 accent-gray-600"
-                  />
-                  <span className="font-bold text-gray-700">No Friction</span>
-                </label>
-                <label className="flex items-center cursor-pointer text-base hover:bg-gray-50 p-2 rounded-lg transition-colors border border-transparent hover:border-gray-200">
-                  <input
-                    type="radio"
-                    name="friction"
-                    checked={simulation.motionDirection === 'up'}
-                    onChange={() => onUpdateSimulation({ motionDirection: 'up' })}
-                    className="mr-3 w-5 h-5 accent-red-500"
-                  />
-                  <span className="font-bold text-gray-700">Impending Motion Up-Slope</span>
-                </label>
-                <label className="flex items-center cursor-pointer text-base hover:bg-gray-50 p-2 rounded-lg transition-colors border border-transparent hover:border-gray-200">
-                  <input
-                    type="radio"
-                    name="friction"
-                    checked={simulation.motionDirection === 'down'}
-                    onChange={() => onUpdateSimulation({ motionDirection: 'down' })}
-                    className="mr-3 w-5 h-5 accent-red-500"
-                  />
-                  <span className="font-bold text-gray-700">Impending Motion Down-Slope</span>
-                </label>
-              </div>
-
-              <div className="text-base text-gray-600 mb-2 font-medium">μ (Coefficient): <span className="font-bold text-gray-900 text-lg">{simulation.mu.toFixed(2)}</span></div>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value={simulation.mu}
-                onChange={(e) => onUpdateSimulation({ mu: Number(e.target.value) })}
-                disabled={simulation.motionDirection === 'none'}
-                className="w-full h-4 accent-yellow-600 cursor-pointer"
-              />
-            </div>
-          </div>
+          <FrictionControl
+            simulation={simulation}
+            onUpdateSimulation={onUpdateSimulation}
+            className={getSpotlightClass(2)}
+          />
 
           {/* Reset Button */}
           <button

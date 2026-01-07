@@ -1,6 +1,9 @@
 
 import { useState, useEffect } from 'react';
 import { SimulationState } from '../types/simulation';
+import { AngleControl } from './controls/AngleControl';
+import { ForceControl } from './controls/ForceControl';
+import { FrictionControl } from './controls/FrictionControl';
 
 interface GuidedLearningProps {
   currentStep: number;
@@ -76,10 +79,19 @@ const GuidedLearning = ({
             <p className="text-base text-gray-700 mb-4 font-medium">
               Start with a flat surface (Angle 0°).
             </p>
-            <ul className="list-disc list-inside text-base text-gray-600 space-y-2 mb-6 ml-2">
-              <li>Set <strong>Angle</strong> to <strong>0°</strong></li>
-              <li>Check <strong>"Mass (Mg) & R_N"</strong></li>
-            </ul>
+            {/* Contextual Control: Angle & Mass */}
+            <div className="my-6 space-y-4">
+              <AngleControl
+                simulation={simulation}
+                onUpdateSimulation={onUpdateSimulation}
+                className={simulation.angle !== 0 ? 'ring-2 ring-yellow-400 bg-yellow-50' : 'bg-green-50 border-green-200'}
+              />
+              <ForceControl
+                simulation={simulation}
+                onUpdateSimulation={onUpdateSimulation}
+                showMassOnly={true}
+              />
+            </div>
 
             {simulation.angle !== 0 && (
               <div className="mb-2 text-xs bg-yellow-100 text-yellow-800 p-2 rounded">
@@ -126,10 +138,18 @@ const GuidedLearning = ({
             <p className="text-base text-gray-700 mb-4 font-medium">
               Add tension and move the block right.
             </p>
-            <ul className="list-disc list-inside text-base text-gray-600 space-y-2 mb-6 ml-2">
-              <li>Add <strong>"Force (F₁)"</strong></li>
-              <li>Select <strong>"Motion Up-Slope"</strong> (Right)</li>
-            </ul>
+            <div className="my-6 space-y-4">
+              <ForceControl
+                simulation={simulation}
+                onUpdateSimulation={onUpdateSimulation}
+                showTensionOnly={true}
+              />
+              <FrictionControl
+                simulation={simulation}
+                onUpdateSimulation={onUpdateSimulation}
+                showDirectionOnly={true}
+              />
+            </div>
 
             <div className="mt-4 p-5 bg-white rounded-xl border-2 border-gray-100 shadow-sm">
               <p className="text-lg font-bold text-gray-800 mb-4">Q: Block moves right. Which way does Friction point?</p>
@@ -176,10 +196,12 @@ const GuidedLearning = ({
             <p className="text-base text-gray-700 mb-4 font-medium">
               Let's tilt the surface.
             </p>
-            <ul className="list-disc list-inside text-base text-gray-600 space-y-2 mb-6 ml-2">
-              <li>Set <strong>Angle</strong> to <strong>30°</strong></li>
-              <li>Check <strong>"Mass (Mg) & R_N"</strong></li>
-            </ul>
+            <div className="my-6">
+              <AngleControl
+                simulation={simulation}
+                onUpdateSimulation={onUpdateSimulation}
+              />
+            </div>
 
             <div className="mt-4 p-5 bg-white rounded-xl border-2 border-gray-100 shadow-sm">
               <p className="text-lg font-bold text-gray-800 mb-4">Q1: Direction of Weight (Mg)?</p>
@@ -283,9 +305,13 @@ const GuidedLearning = ({
             <p className="text-base text-gray-700 mb-4 font-medium">
               Friction stops the block from sliding down.
             </p>
-            <ul className="list-disc list-inside text-base text-gray-600 space-y-2 mb-6 ml-2">
-              <li>Select <strong>"Motion Down-Slope"</strong></li>
-            </ul>
+            <div className="my-6">
+              <FrictionControl
+                simulation={simulation}
+                onUpdateSimulation={onUpdateSimulation}
+                showDirectionOnly={true}
+              />
+            </div>
 
             <div className="mt-4 p-5 bg-white rounded-xl border-2 border-gray-100 shadow-sm">
               <p className="text-lg font-bold text-gray-800 mb-4">Q: To stop sliding DOWN, where does Friction point?</p>
